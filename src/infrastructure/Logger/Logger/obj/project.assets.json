@@ -182,6 +182,19 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
+      "Microsoft.Extensions.Features/8.0.22": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/Microsoft.Extensions.Features.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.Features.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.Extensions.Http/8.0.1": {
         "type": "package",
         "dependencies": {
@@ -227,7 +240,7 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
-      "Microsoft.Extensions.Logging.Abstractions/8.0.2": {
+      "Microsoft.Extensions.Logging.Abstractions/8.0.3": {
         "type": "package",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
@@ -443,7 +456,12 @@
         "dependencies": {
           "CSharpFunctionalExtensions": "3.6.0",
           "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
+          "Microsoft.Extensions.DependencyInjection": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Features": "8.0.22",
           "Microsoft.Extensions.Http": "8.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+          "Serilog": "4.2.0",
           "Serilog.Sinks.File": "7.0.0",
           "System.ServiceProcess.ServiceController": "8.0.1"
         },
@@ -726,6 +744,25 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "Microsoft.Extensions.Features/8.0.22": {
+      "sha512": "GxpHLDVHtOATSMAWbrcavLCBCUazkSL85qlWbwyscCzVpWSa6QoLA590FXo20IXT+YHRW/3RKQkgsvwr9uTM3w==",
+      "type": "package",
+      "path": "microsoft.extensions.features/8.0.22",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net462/Microsoft.Extensions.Features.dll",
+        "lib/net462/Microsoft.Extensions.Features.xml",
+        "lib/net8.0/Microsoft.Extensions.Features.dll",
+        "lib/net8.0/Microsoft.Extensions.Features.xml",
+        "lib/netstandard2.0/Microsoft.Extensions.Features.dll",
+        "lib/netstandard2.0/Microsoft.Extensions.Features.xml",
+        "microsoft.extensions.features.8.0.22.nupkg.sha512",
+        "microsoft.extensions.features.nuspec"
+      ]
+    },
     "Microsoft.Extensions.Http/8.0.1": {
       "sha512": "kDYeKJUzh0qeg/AI+nSr3ffthmXYQTEb0nS9qRC7YhSbbuN4M4NPbaB77AJwtkTnCV9XZ7qYj3dkZaNcyl73EA==",
       "type": "package",
@@ -788,10 +825,10 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Logging.Abstractions/8.0.2": {
-      "sha512": "nroMDjS7hNBPtkZqVBbSiQaQjWRDxITI8Y7XnDs97rqG3EbzVTNLZQf7bIeUJcaHOV8bca47s1Uxq94+2oGdxA==",
+    "Microsoft.Extensions.Logging.Abstractions/8.0.3": {
+      "sha512": "dL0QGToTxggRLMYY4ZYX5AMwBb+byQBd/5dMiZE07Nv73o6I5Are3C7eQTh7K2+A4ct0PVISSr7TZANbiNb2yQ==",
       "type": "package",
-      "path": "microsoft.extensions.logging.abstractions/8.0.2",
+      "path": "microsoft.extensions.logging.abstractions/8.0.3",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -856,7 +893,7 @@
         "lib/net8.0/Microsoft.Extensions.Logging.Abstractions.xml",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.xml",
-        "microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
+        "microsoft.extensions.logging.abstractions.8.0.3.nupkg.sha512",
         "microsoft.extensions.logging.abstractions.nuspec",
         "useSharedDesignerContext.txt"
       ]
@@ -1160,8 +1197,8 @@
     },
     "Shared/1.0.0": {
       "type": "project",
-      "path": "../../../../../00 general/Shared/Shared.csproj",
-      "msbuildProject": "../../../../../00 general/Shared/Shared.csproj"
+      "path": "../../../core/Shared/Shared.csproj",
+      "msbuildProject": "../../../core/Shared/Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -1198,11 +1235,11 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj": {
-              "projectPath": "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj"
-            },
             "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj": {
               "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj"
+            },
+            "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Shared/Shared.csproj": {
+              "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Shared/Shared.csproj"
             }
           }
         }
@@ -1238,14 +1275,21 @@
           "CSharpFunctionalExtensions": "3.6.0",
           "FirebirdSql.Data.FirebirdClient": "8.5.4",
           "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+          "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
           "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
           "Microsoft.EntityFrameworkCore": "8.0.22",
           "Microsoft.Extensions.Caching.Memory": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Features": "8.0.22",
           "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
           "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+          "Microsoft.Extensions.Http": "8.0.1",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
           "Serilog": "4.2.0",
-          "Serilog.Extensions.Logging": "8.0.0"
+          "Serilog.Extensions.Logging": "8.0.0",
+          "Serilog.Sinks.File": "7.0.0",
+          "System.ServiceProcess.ServiceController": "8.0.1"
         },
         "imports": [
           "net461",
