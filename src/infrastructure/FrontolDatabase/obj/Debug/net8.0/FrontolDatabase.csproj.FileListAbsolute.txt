@@ -15,3 +15,4 @@
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/ref/FrontolDatabase.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Shared.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Shared.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.sourcelink.json

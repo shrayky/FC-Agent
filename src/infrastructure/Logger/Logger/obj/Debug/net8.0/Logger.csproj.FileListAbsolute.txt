@@ -103,3 +103,4 @@ D:/DesignSharpC/FmuApiCentral/src/Infrastructure/Logger/Logger/obj/Debug/net8.0/
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Logger/Logger/obj/Debug/net8.0/refint/Logger.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Logger/Logger/obj/Debug/net8.0/Logger.pdb
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Logger/Logger/obj/Debug/net8.0/ref/Logger.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Logger/Logger/obj/Debug/net8.0/Logger.sourcelink.json

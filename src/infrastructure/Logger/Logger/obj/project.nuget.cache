@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "HKbvfGDln/0=",
+  "dgSpecHash": "uHidQE2Sbog=",
   "success": true,
   "projectFilePath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Logger/Logger/Logger.csproj",
   "expectedPackageFiles": [
@@ -14,9 +14,10 @@
     "/home/arseniiz/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.2/microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.diagnostics/8.0.1/microsoft.extensions.diagnostics.8.0.1.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.diagnostics.abstractions/8.0.1/microsoft.extensions.diagnostics.abstractions.8.0.1.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.features/8.0.22/microsoft.extensions.features.8.0.22.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.http/8.0.1/microsoft.extensions.http.8.0.1.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.logging/8.0.1/microsoft.extensions.logging.8.0.1.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.logging.abstractions/8.0.2/microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.logging.abstractions/8.0.3/microsoft.extensions.logging.abstractions.8.0.3.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.options/8.0.2/microsoft.extensions.options.8.0.2.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.options.configurationextensions/8.0.0/microsoft.extensions.options.configurationextensions.8.0.0.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.primitives/8.0.0/microsoft.extensions.primitives.8.0.0.nupkg.sha512",

@@ -152,6 +152,14 @@
           }
         }
       },
+      "Microsoft.Extensions.Features/8.0.22": {
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.Features.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.2225.52808"
+          }
+        }
+      },
       "Microsoft.Extensions.Http/8.0.1": {
         "dependencies": {
           "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
@@ -302,7 +310,12 @@
         "dependencies": {
           "CSharpFunctionalExtensions": "3.6.0",
           "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
+          "Microsoft.Extensions.DependencyInjection": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Features": "8.0.22",
           "Microsoft.Extensions.Http": "8.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+          "Serilog": "4.2.0",
           "Serilog.Sinks.File": "7.0.0",
           "System.ServiceProcess.ServiceController": "8.0.1"
         },
@@ -404,6 +417,13 @@
       "sha512": "sha512-elH2vmwNmsXuKmUeMQ4YW9ldXiF+gSGDgg1vORksob5POnpaI6caj1Hu8zaYbEuibhqCoWg0YRWDazBY3zjBfg==",
       "path": "microsoft.extensions.diagnostics.abstractions/8.0.1",
       "hashPath": "microsoft.extensions.diagnostics.abstractions.8.0.1.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Features/8.0.22": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-GxpHLDVHtOATSMAWbrcavLCBCUazkSL85qlWbwyscCzVpWSa6QoLA590FXo20IXT+YHRW/3RKQkgsvwr9uTM3w==",
+      "path": "microsoft.extensions.features/8.0.22",
+      "hashPath": "microsoft.extensions.features.8.0.22.nupkg.sha512"
     },
     "Microsoft.Extensions.Http/8.0.1": {
       "type": "package",

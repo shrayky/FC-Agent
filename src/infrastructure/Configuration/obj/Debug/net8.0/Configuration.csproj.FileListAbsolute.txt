@@ -103,3 +103,4 @@ D:/DesignSharpC/FmuApiCentral/src/Infrastructure/Configuration/obj/Debug/net8.0/
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Configuration/obj/Debug/net8.0/refint/Configuration.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Configuration/obj/Debug/net8.0/Configuration.pdb
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Configuration/obj/Debug/net8.0/ref/Configuration.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/Configuration/obj/Debug/net8.0/Configuration.sourcelink.json

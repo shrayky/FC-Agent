@@ -17,7 +17,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\..\00 general\Shared\Shared.csproj" />
+      <ProjectReference Include="..\..\core\Shared\Shared.csproj" />
       <ProjectReference Include="..\..\core\Application\Application.csproj" />
       <ProjectReference Include="..\..\core\Domain\Domain.csproj" />
       <ProjectReference Include="..\..\infrastructure\CentralServerExchange\CentralServerExchange.csproj" />

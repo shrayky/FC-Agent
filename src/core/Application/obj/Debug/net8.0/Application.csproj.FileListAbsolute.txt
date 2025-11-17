@@ -15,3 +15,4 @@
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/obj/Debug/net8.0/refint/Application.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/obj/Debug/net8.0/Application.pdb
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/obj/Debug/net8.0/ref/Application.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/obj/Debug/net8.0/Application.sourcelink.json

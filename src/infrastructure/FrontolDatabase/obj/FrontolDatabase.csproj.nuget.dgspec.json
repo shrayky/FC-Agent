@@ -55,14 +55,21 @@
             "CSharpFunctionalExtensions": "3.6.0",
             "FirebirdSql.Data.FirebirdClient": "8.5.4",
             "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+            "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
             "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
             "Microsoft.EntityFrameworkCore": "8.0.22",
             "Microsoft.Extensions.Caching.Memory": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+            "Microsoft.Extensions.Features": "8.0.22",
             "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
             "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+            "Microsoft.Extensions.Http": "8.0.1",
             "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
             "Serilog": "4.2.0",
-            "Serilog.Extensions.Logging": "8.0.0"
+            "Serilog.Extensions.Logging": "8.0.0",
+            "Serilog.Sinks.File": "7.0.0",
+            "System.ServiceProcess.ServiceController": "8.0.1"
           },
           "imports": [
             "net461",
@@ -142,25 +149,69 @@
             },
             "Microsoft.AspNetCore.Http.Abstractions": {
               "target": "Package",
-              "version": "(, )"
+              "version": "[2.3.0, )",
+              "versionCentrallyManaged": true
+            },
+            "Microsoft.Extensions.DependencyInjection": {
+              "target": "Package",
+              "version": "[8.0.1, )",
+              "versionCentrallyManaged": true
+            },
+            "Microsoft.Extensions.DependencyInjection.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.2, )",
+              "versionCentrallyManaged": true
+            },
+            "Microsoft.Extensions.Features": {
+              "target": "Package",
+              "version": "[8.0.22, )",
+              "versionCentrallyManaged": true
             },
             "Microsoft.Extensions.Http": {
               "target": "Package",
-              "version": "(, )"
+              "version": "[8.0.1, )",
+              "versionCentrallyManaged": true
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.3, )",
+              "versionCentrallyManaged": true
+            },
+            "Serilog": {
+              "target": "Package",
+              "version": "[4.2.0, )",
+              "versionCentrallyManaged": true
+            },
+            "Serilog.Sinks.File": {
+              "target": "Package",
+              "version": "[7.0.0, )",
+              "versionCentrallyManaged": true
+            },
+            "System.ServiceProcess.ServiceController": {
+              "target": "Package",
+              "version": "[8.0.1, )",
+              "versionCentrallyManaged": true
             }
           },
           "centralPackageVersions": {
             "CSharpFunctionalExtensions": "3.6.0",
             "FirebirdSql.Data.FirebirdClient": "8.5.4",
             "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+            "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
             "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
             "Microsoft.EntityFrameworkCore": "8.0.22",
             "Microsoft.Extensions.Caching.Memory": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+            "Microsoft.Extensions.Features": "8.0.22",
             "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
             "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+            "Microsoft.Extensions.Http": "8.0.1",
             "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
             "Serilog": "4.2.0",
-            "Serilog.Extensions.Logging": "8.0.0"
+            "Serilog.Extensions.Logging": "8.0.0",
+            "Serilog.Sinks.File": "7.0.0",
+            "System.ServiceProcess.ServiceController": "8.0.1"
           },
           "imports": [
             "net461",
@@ -260,14 +311,21 @@
             "CSharpFunctionalExtensions": "3.6.0",
             "FirebirdSql.Data.FirebirdClient": "8.5.4",
             "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+            "Microsoft.AspNetCore.Http.Abstractions": "2.3.0",
             "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
             "Microsoft.EntityFrameworkCore": "8.0.22",
             "Microsoft.Extensions.Caching.Memory": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection": "8.0.1",
+            "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+            "Microsoft.Extensions.Features": "8.0.22",
             "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
             "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+            "Microsoft.Extensions.Http": "8.0.1",
             "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
             "Serilog": "4.2.0",
-            "Serilog.Extensions.Logging": "8.0.0"
+            "Serilog.Extensions.Logging": "8.0.0",
+            "Serilog.Sinks.File": "7.0.0",
+            "System.ServiceProcess.ServiceController": "8.0.1"
           },
           "imports": [
             "net461",

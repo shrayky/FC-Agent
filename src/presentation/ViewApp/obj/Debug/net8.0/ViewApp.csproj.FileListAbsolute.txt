@@ -79,7 +79,10 @@
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/obj/Debug/net8.0/staticwebassets.build.json.cache
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/obj/Debug/net8.0/staticwebassets.build.endpoints.json
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/obj/Debug/net8.0/swae.build.ex.cache
-/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.Extensions.Configuration.Abstractions.dll
-/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.Extensions.FileProviders.Abstractions.dll
-/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.Extensions.Primitives.dll
-/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/System.Diagnostics.DiagnosticSource.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/FirebirdSql.Data.FirebirdClient.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/FirebirdSql.EntityFrameworkCore.Firebird.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Abstractions.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Relational.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/FrontolDatabase.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/presentation/ViewApp/bin/Debug/net8.0/FrontolDatabase.pdb
