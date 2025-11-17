@@ -388,8 +388,16 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# MSBuild cache files
+**/*.AssemblyReference.cache
+**/*.AssemblyInfoInputs.cache
+**/*.csproj.AssemblyReference.cache
+**/*.csproj.CoreCompileInputs.cache
+**/*.csproj.FileListAbsolute.txt
+**/*.csproj.Up2Date
 
-# Webix library folder
-FmuApi.API/wwwroot/lib/webix/
-/FmuApi.API/images/fmu-api-container-image.tar.gz
-.vscode
+# Rider IDE files
+**/rider.project.restore.info
+**/rider.project.model.nuget.info
+**/*.assets.cache
+**/*.DotSettings.user
