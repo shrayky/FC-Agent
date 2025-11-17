@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "i+Li0A96IKM=",
+  "dgSpecHash": "/l5ogg4gsFI=",
   "success": true,
   "projectFilePath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/CentralServerExchange.csproj",
   "expectedPackageFiles": [
@@ -12,35 +12,21 @@
     "/home/arseniiz/.nuget/packages/microsoft.aspnetcore.signalr.client.core/8.0.20/microsoft.aspnetcore.signalr.client.core.8.0.20.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.aspnetcore.signalr.common/8.0.20/microsoft.aspnetcore.signalr.common.8.0.20.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.aspnetcore.signalr.protocols.json/8.0.20/microsoft.aspnetcore.signalr.protocols.json.8.0.20.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.configuration.abstractions/9.0.0/microsoft.extensions.configuration.abstractions.9.0.0.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.configuration.abstractions/8.0.0/microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.dependencyinjection/8.0.1/microsoft.extensions.dependencyinjection.8.0.1.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/9.0.0/microsoft.extensions.dependencyinjection.abstractions.9.0.0.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.diagnostics.abstractions/9.0.0/microsoft.extensions.diagnostics.abstractions.9.0.0.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.2/microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.diagnostics.abstractions/8.0.1/microsoft.extensions.diagnostics.abstractions.8.0.1.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.features/8.0.20/microsoft.extensions.features.8.0.20.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.fileproviders.abstractions/9.0.0/microsoft.extensions.fileproviders.abstractions.9.0.0.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.hosting.abstractions/9.0.0/microsoft.extensions.hosting.abstractions.9.0.0.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.fileproviders.abstractions/8.0.0/microsoft.extensions.fileproviders.abstractions.8.0.0.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.hosting.abstractions/8.0.1/microsoft.extensions.hosting.abstractions.8.0.1.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.extensions.logging/8.0.1/microsoft.extensions.logging.8.0.1.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.logging.abstractions/9.0.0/microsoft.extensions.logging.abstractions.9.0.0.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.options/9.0.0/microsoft.extensions.options.9.0.0.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/microsoft.extensions.primitives/9.0.0/microsoft.extensions.primitives.9.0.0.nupkg.sha512",
-    "/home/arseniiz/.nuget/packages/system.diagnostics.diagnosticsource/9.0.0/system.diagnostics.diagnosticsource.9.0.0.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.logging.abstractions/8.0.3/microsoft.extensions.logging.abstractions.8.0.3.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.options/8.0.2/microsoft.extensions.options.8.0.2.nupkg.sha512",
+    "/home/arseniiz/.nuget/packages/microsoft.extensions.primitives/8.0.0/microsoft.extensions.primitives.8.0.0.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/system.io.pipelines/8.0.0/system.io.pipelines.8.0.0.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/system.threading.channels/8.0.0/system.threading.channels.8.0.0.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.netcore.app.ref/8.0.22/microsoft.netcore.app.ref.8.0.22.nupkg.sha512",
     "/home/arseniiz/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.22/microsoft.aspnetcore.app.ref.8.0.22.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "message": "CentralServerExchange depends on Microsoft.Extensions.Hosting.Abstractions (>= 8.0.20) but Microsoft.Extensions.Hosting.Abstractions 8.0.20 was not found. Microsoft.Extensions.Hosting.Abstractions 9.0.0 was resolved instead.",
-      "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/CentralServerExchange.csproj",
-      "warningLevel": 1,
-      "filePath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/CentralServerExchange.csproj",
-      "libraryId": "Microsoft.Extensions.Hosting.Abstractions",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    }
-  ]
+  "logs": []
 }

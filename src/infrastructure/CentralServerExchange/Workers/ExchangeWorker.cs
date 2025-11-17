@@ -1,6 +1,5 @@
 using CentralServerExchange.Services;
 using Domain.Configuration.Interfaces;
-using Domain.Messages.Dto;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

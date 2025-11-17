@@ -1,8 +1,6 @@
-﻿using Domain.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using Shared.DI.Attributes;using Domain.Attributes;
-
+using Shared.DI.Attributes;
 
 namespace Application
 {

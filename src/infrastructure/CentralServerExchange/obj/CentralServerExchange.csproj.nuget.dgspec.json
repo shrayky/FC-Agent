@@ -58,7 +58,7 @@
             "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
             "Microsoft.EntityFrameworkCore": "8.0.22",
             "Microsoft.Extensions.Caching.Memory": "8.0.1",
-            "Microsoft.Extensions.Hosting.Abstractions": "8.0.20",
+            "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
             "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
             "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
             "Serilog": "4.2.0",
@@ -146,7 +146,7 @@
             },
             "Microsoft.Extensions.Hosting.Abstractions": {
               "target": "Package",
-              "version": "[8.0.20, )",
+              "version": "[8.0.1, )",
               "versionCentrallyManaged": true
             }
           },
@@ -157,7 +157,7 @@
             "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
             "Microsoft.EntityFrameworkCore": "8.0.22",
             "Microsoft.Extensions.Caching.Memory": "8.0.1",
-            "Microsoft.Extensions.Hosting.Abstractions": "8.0.20",
+            "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
             "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
             "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
             "Serilog": "4.2.0",

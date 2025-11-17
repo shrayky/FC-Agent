@@ -13,3 +13,4 @@
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/bin/Debug/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/bin/Debug/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Debug/net8.0/Domain.csproj.Up2Date
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Debug/net8.0/Domain.sourcelink.json

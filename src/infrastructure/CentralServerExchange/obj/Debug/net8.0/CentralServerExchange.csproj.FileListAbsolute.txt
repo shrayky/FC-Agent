@@ -13,3 +13,4 @@
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/refint/CentralServerExchange.dll
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.pdb
 /home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/ref/CentralServerExchange.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.sourcelink.json
