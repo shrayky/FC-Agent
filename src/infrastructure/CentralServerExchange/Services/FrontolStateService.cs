@@ -4,6 +4,7 @@ using Domain.Configuration.Interfaces;
 using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
 using Domain.Messages.Dto;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CentralServerExchange.Services;
@@ -12,13 +13,13 @@ public class FrontolStateService
 {
     private readonly ILogger<FrontolStateService> _logger;
     private readonly IParametersService _parametersService;
-    private readonly IFrontolMainDb _repository;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IFrontolMainDb repository)
+    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _parametersService = parametersService;
-        _repository = repository;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<Message> Current()
@@ -29,12 +30,15 @@ public class FrontolStateService
         
         if (!string.IsNullOrEmpty(settings.DatabaseConnection.DatabasePath))
         {
-            var version = await _repository.Version();
+            using var scope = _scopeFactory.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+            
+            var version = await repository.Version();
             
             if (version.IsSuccess) 
                 frontolInfo.Version = version.Value;
 
-            var globalConfig = await _repository.GetGlobalControlConfig();
+            var globalConfig = await repository.GetGlobalControlConfig();
             
             if (globalConfig.IsSuccess)
                 frontolInfo.Settings.GlobalControl = globalConfig.Value;
