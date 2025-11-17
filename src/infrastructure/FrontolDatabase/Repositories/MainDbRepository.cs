@@ -38,7 +38,9 @@ public class MainDbRepository : IFrontolMainDb
 
         try
         {
-            var db = await _ctx.CustomDb.ToListAsync();
+            var db = await _ctx.CustomDb
+                .AsNoTracking()
+                .ToListAsync();
 
             if (db.Count != 0)
                 return Result.Success(db[0].VersionFrontol);
@@ -123,6 +125,7 @@ public class MainDbRepository : IFrontolMainDb
             .ToArray();
 
         var settings = await _ctx.Settings
+            .AsNoTracking()
             .Where(s => names.Contains(s.Name))
             .ToListAsync();
 
