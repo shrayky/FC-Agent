@@ -18,9 +18,9 @@ public class CustomDb
     
     [Column("DBIDENT")]
     public int DbIdent { get; set; }
-    
+
     [Column("COPYLOGTOBDS")]
-    public int CopyLogToBds { get; set; }
+    public int? CopyLogToBds { get; set; }
     
     [Column("MAINTAINSTATE")]
     public int MaintainState { get; set; }
