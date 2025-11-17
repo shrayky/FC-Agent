@@ -1,6 +1,4 @@
-using Domain.Frontol.Dto;
-
-namespace Domain.Angent.Dto;
+namespace Domain.Agent.Dto;
 
 public class AgentData
 {

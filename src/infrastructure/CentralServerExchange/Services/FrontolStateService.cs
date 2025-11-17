@@ -1,4 +1,4 @@
-using Domain.Angent.Dto;
+using Domain.Agent.Dto;
 using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Dto;

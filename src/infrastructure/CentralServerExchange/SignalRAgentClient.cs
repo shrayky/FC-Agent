@@ -1,4 +1,4 @@
-using Domain.Angent.Dto;
+using Domain.Agent.Dto;
 using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Dto;
@@ -147,7 +147,7 @@ public class SignalRAgentClient
         _logger.LogInformation("Клиент SignalR остановлен");
     }
     
-    public async Task SendAgentDataAsync(Message message)
+    public async Task SendAgentState(Message message)
     {
         if (_connection == null || _connection.State != HubConnectionState.Connected)
         {
@@ -166,7 +166,7 @@ public class SignalRAgentClient
         {
             message.AgentToken = _agentId;
 
-            await _connection.InvokeAsync("SendAgentData", message, _cancellationTokenSource.Token);
+            await _connection.InvokeAsync("AgentState", message, _cancellationTokenSource.Token);
             _logger.LogDebug("Данные агента отправлены на сервер");
         }
         catch (Exception ex)

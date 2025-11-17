@@ -1,4 +1,4 @@
-using Domain.Angent.Dto;
+using Domain.Agent.Dto;
 using Domain.Frontol.Dto;
 
 namespace Domain.Messages.Dto;
