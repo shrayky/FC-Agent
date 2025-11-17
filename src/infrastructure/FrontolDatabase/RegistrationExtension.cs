@@ -17,10 +17,10 @@ namespace FrontolDatabase
 
             var fullDbPath = dbConfig.DatabasePath.Split(":");
 
-            if (fullDbPath.Length == 2)
+            if (fullDbPath.Length >= 3)
             {
                 serverName = fullDbPath[0];
-                databasePath = fullDbPath[1];
+                databasePath = $"{fullDbPath[1]}:{fullDbPath[2]}";
             }
             
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";

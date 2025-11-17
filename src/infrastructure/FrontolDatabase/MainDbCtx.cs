@@ -24,7 +24,7 @@ public class MainDbCtx : DbContext
     {
         System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-        if (string.IsNullOrEmpty(_connectionString))
+        if (!string.IsNullOrEmpty(_connectionString))
             optionsBuilder.UseFirebird(_connectionString);
     }
 
