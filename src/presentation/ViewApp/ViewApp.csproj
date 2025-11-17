@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+
+        <OptimizationPreference>Size</OptimizationPreference>
+
+        <Version>1.1.0</Version>
+        <AssemblyName>fc</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\00 general\Shared\Shared.csproj" />
+      <ProjectReference Include="..\..\core\Application\Application.csproj" />
+      <ProjectReference Include="..\..\core\Domain\Domain.csproj" />
+      <ProjectReference Include="..\..\infrastructure\CentralServerExchange\CentralServerExchange.csproj" />
+      <ProjectReference Include="..\..\infrastructure\Configuration\Configuration.csproj" />
+      <ProjectReference Include="..\..\infrastructure\FrontolDatabase\FrontolDatabase.csproj" />
+      <ProjectReference Include="..\..\infrastructure\Logger\Logger\Logger.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+    </ItemGroup>
+
+    <Target Name="CleanupPublishFolder" AfterTargets="Publish">
+        <ItemGroup>
+            <FilesToDelete Include="$(PublishDir)**\*.pdb"/>
+            <FilesToDelete Include="$(PublishDir)**\*.json"/>
+            <FilesToDelete Include="$(PublishDir)**\*.config"/>
+        </ItemGroup>
+        <Delete Files="@(FilesToDelete)"/>
+        <Message Text="Удалены .pdb и .json файлы из папки публикации" Importance="high"/>
+    </Target>
+
+</Project>

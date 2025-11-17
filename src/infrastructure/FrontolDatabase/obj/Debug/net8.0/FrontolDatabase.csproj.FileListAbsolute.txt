@@ -1,0 +1,17 @@
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/FrontolDatabase.deps.json
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/FrontolDatabase.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/FrontolDatabase.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Domain.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Domain.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.csproj.AssemblyReference.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.GeneratedMSBuildEditorConfig.editorconfig
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.AssemblyInfoInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.AssemblyInfo.cs
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.csproj.CoreCompileInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolD.5FE0F9DC.Up2Date
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/refint/FrontolDatabase.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/FrontolDatabase.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/obj/Debug/net8.0/ref/FrontolDatabase.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Shared.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/FrontolDatabase/bin/Debug/net8.0/Shared.pdb

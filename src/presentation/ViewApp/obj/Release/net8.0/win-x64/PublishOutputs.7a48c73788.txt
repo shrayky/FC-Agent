@@ -1,0 +1,8 @@
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/appsettings.Development.json
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/appsettings.json
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/Shared.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/Application.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/Domain.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/Configuration.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/Logger.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/builds/x64 windows/fc.exe

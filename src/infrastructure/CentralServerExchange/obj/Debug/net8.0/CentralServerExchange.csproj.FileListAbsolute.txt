@@ -1,0 +1,15 @@
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/bin/Debug/net8.0/CentralServerExchange.deps.json
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/bin/Debug/net8.0/CentralServerExchange.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/bin/Debug/net8.0/CentralServerExchange.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/bin/Debug/net8.0/Domain.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/bin/Debug/net8.0/Domain.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.csproj.AssemblyReference.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.GeneratedMSBuildEditorConfig.editorconfig
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.AssemblyInfoInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.AssemblyInfo.cs
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.csproj.CoreCompileInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralS.33C7A271.Up2Date
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/refint/CentralServerExchange.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/CentralServerExchange.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/infrastructure/CentralServerExchange/obj/Debug/net8.0/ref/CentralServerExchange.dll

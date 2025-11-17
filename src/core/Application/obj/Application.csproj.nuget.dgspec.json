@@ -1,0 +1,279 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/Application.csproj": {}
+  },
+  "projects": {
+    "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj",
+        "projectName": "Shared",
+        "projectPath": "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj",
+        "packagesPath": "/home/arseniiz/.nuget/packages/",
+        "outputPath": "/home/arseniiz/c_sharp_prj/00 general/Shared/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/arseniiz/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "CSharpFunctionalExtensions": {
+              "target": "Package",
+              "version": "[3.6.0, )"
+            },
+            "Microsoft.AspNetCore.Http.Abstractions": {
+              "target": "Package",
+              "version": "[2.3.0, )"
+            },
+            "Microsoft.Extensions.Http": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            },
+            "Serilog.Sinks.File": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "System.ServiceProcess.ServiceController": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/arseniiz/.dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/Application.csproj",
+        "projectName": "Application",
+        "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/Application.csproj",
+        "packagesPath": "/home/arseniiz/.nuget/packages/",
+        "outputPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Application/obj/",
+        "projectStyle": "PackageReference",
+        "centralPackageVersionsManagementEnabled": true,
+        "configFilePaths": [
+          "/home/arseniiz/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj": {
+                "projectPath": "/home/arseniiz/c_sharp_prj/00 general/Shared/Shared.csproj"
+              },
+              "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj": {
+                "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "centralPackageVersions": {
+            "CSharpFunctionalExtensions": "3.6.0",
+            "FirebirdSql.Data.FirebirdClient": "8.5.4",
+            "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+            "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
+            "Microsoft.EntityFrameworkCore": "8.0.22",
+            "Microsoft.Extensions.Caching.Memory": "8.0.1",
+            "Microsoft.Extensions.Hosting.Abstractions": "8.0.20",
+            "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+            "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+            "Serilog": "4.2.0",
+            "Serilog.Extensions.Logging": "8.0.0"
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/arseniiz/.dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj",
+        "projectName": "Domain",
+        "projectPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/Domain.csproj",
+        "packagesPath": "/home/arseniiz/.nuget/packages/",
+        "outputPath": "/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/",
+        "projectStyle": "PackageReference",
+        "centralPackageVersionsManagementEnabled": true,
+        "configFilePaths": [
+          "/home/arseniiz/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "CSharpFunctionalExtensions": {
+              "target": "Package",
+              "version": "[3.6.0, )",
+              "versionCentrallyManaged": true
+            }
+          },
+          "centralPackageVersions": {
+            "CSharpFunctionalExtensions": "3.6.0",
+            "FirebirdSql.Data.FirebirdClient": "8.5.4",
+            "FirebirdSql.EntityFrameworkCore.Firebird": "8.5.4",
+            "Microsoft.AspNetCore.SignalR.Client": "8.0.20",
+            "Microsoft.EntityFrameworkCore": "8.0.22",
+            "Microsoft.Extensions.Caching.Memory": "8.0.1",
+            "Microsoft.Extensions.Hosting.Abstractions": "8.0.20",
+            "Microsoft.Extensions.Hosting.WindowsServices": "8.0.1",
+            "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+            "Serilog": "4.2.0",
+            "Serilog.Extensions.Logging": "8.0.0"
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/arseniiz/.dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

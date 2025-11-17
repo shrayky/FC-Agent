@@ -1,0 +1,12 @@
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/bin/Release/net8.0/Domain.deps.json
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/bin/Release/net8.0/Domain.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/bin/Release/net8.0/Domain.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.csproj.AssemblyReference.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.AssemblyInfoInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.AssemblyInfo.cs
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.csproj.CoreCompileInputs.cache
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/refint/Domain.dll
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/Domain.pdb
+/home/arseniiz/c_sharp_prj/FrontolConfigurator-Agent/src/core/Domain/obj/Release/net8.0/ref/Domain.dll

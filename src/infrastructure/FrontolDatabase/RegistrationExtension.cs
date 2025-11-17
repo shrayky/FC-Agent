@@ -1,0 +1,38 @@
+﻿using System.Reflection;
+using Domain.Configuration.Options;
+using Domain.Frontol.Interfaces;
+using FrontolDatabase.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Shared.DI.Attributes;
+
+namespace FrontolDatabase
+{
+    public static class RegistrationExtension
+    {
+        public static IServiceCollection AddFrontolDatabase(this IServiceCollection services, DatabaseConnection dbConfig)
+        {
+            var serverName = @"localhost";
+            var databasePath = @"c:\temp\\main.gdb";
+
+            var fullDbPath = dbConfig.DatabasePath.Split(":");
+
+            if (fullDbPath.Length == 2)
+            {
+                serverName = fullDbPath[0];
+                databasePath = fullDbPath[1];
+            }
+            
+            var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
+            
+            services.AddDbContext<MainDbCtx>(options =>
+                options.UseFirebird(connectionString));
+            
+            services.AddScoped<IFrontolMainDb, MainDbRepository>();
+            
+            services.AddAutoRegisteredServices([Assembly.GetExecutingAssembly()]);
+
+            return services;
+        }
+    }
+}
