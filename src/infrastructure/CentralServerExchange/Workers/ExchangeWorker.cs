@@ -20,8 +20,13 @@ public class ExchangeWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         
+#if DEBUG
+    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+#else
+    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+#endif
+                
         await _signalRClient.StartAsync();  
         
         while (!stoppingToken.IsCancellationRequested)
@@ -31,9 +36,13 @@ public class ExchangeWorker : BackgroundService
 
             var agentData = await _frontolStateService.Current();
             
-            await _signalRClient.SendAgentDataAsync(agentData);
+            await _signalRClient.SendAgentState(agentData);
 
-            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+#if DEBUG
+    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+#else
+    await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);      
+#endif
         }
     }
 }
