@@ -9,6 +9,8 @@ namespace CentralServerExchange
         public static IServiceCollection AddCentralServerClient(this IServiceCollection services)
         {
             services.AddSingleton<FrontolStateService>();
+            services.AddSingleton<AtolLicenseService>();
+            
             services.AddSingleton<SignalRAgentClient>();
             
             services.AddHostedService<ExchangeWorker>();
