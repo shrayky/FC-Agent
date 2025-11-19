@@ -6,6 +6,8 @@ namespace Domain.Configuration.Options
     {
         [JsonPropertyName("databasePath")]
         public string DatabasePath { get; set; } = string.Empty;
+        [JsonPropertyName("logDatabasePath")]
+        public string LogDatabasePath { get; set; } = string.Empty;
         
         [JsonPropertyName("userName")]
         public string UserName { get; set; } = "SYSDBA";
