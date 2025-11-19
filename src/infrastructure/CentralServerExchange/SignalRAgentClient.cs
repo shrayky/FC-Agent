@@ -20,7 +20,6 @@ public class SignalRAgentClient
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
     private bool _isRegistered;
-    private bool _isStarted;
 
     public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService)
     {
@@ -28,7 +27,7 @@ public class SignalRAgentClient
         _parametersService = parametersService;
     }
     
-    public bool ConnectionUp() => _isStarted;
+    public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
 
     public async Task StartAsync()
     {
@@ -82,7 +81,6 @@ public class SignalRAgentClient
         {
             await _connection.StartAsync(_cancellationTokenSource.Token);
             _logger.LogInformation("Подключено к SignalR серверу: {HubUrl}", _hubUrl);
-            _isStarted = true;
 
             await RegisterAgentAsync();
         }
@@ -114,7 +112,6 @@ public class SignalRAgentClient
         try
         {
             await _connection.InvokeAsync("RegisterAgent", agentData, _cancellationTokenSource.Token);
-            _logger.LogInformation("Запрос на регистрацию агента отправлен. AgentId: {AgentId}", _agentId);
         }
         catch (Exception ex)
         {
@@ -131,7 +128,6 @@ public class SignalRAgentClient
     private void OnReceiveMessage(string message)
     {
         _logger.LogInformation("Получено сообщение от сервера: {Message}", message);
-        // TODO: Обработка сообщения
     }
     
     public async Task StopAsync()
@@ -143,7 +139,6 @@ public class SignalRAgentClient
         
         await _connection.StopAsync();
         await _connection.DisposeAsync();
-        _isStarted = false;
         _logger.LogInformation("Клиент SignalR остановлен");
     }
     
