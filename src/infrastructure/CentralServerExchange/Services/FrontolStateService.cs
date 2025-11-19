@@ -14,12 +14,14 @@ public class FrontolStateService
     private readonly ILogger<FrontolStateService> _logger;
     private readonly IParametersService _parametersService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly AtolLicenseService _atolLicenseService;
 
-    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IServiceScopeFactory scopeFactory)
+    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IServiceScopeFactory scopeFactory, AtolLicenseService atolLicenseService)
     {
         _logger = logger;
         _parametersService = parametersService;
         _scopeFactory = scopeFactory;
+        _atolLicenseService = atolLicenseService;
     }
 
     public async Task<Message> Current()
@@ -47,12 +49,16 @@ public class FrontolStateService
         Message state = new()
         {
             AgentToken = settings.CentralServerSettings.Token,
+            
             AgentInformation = new AgentData
             {
                 Version = ApplicationInformation.Version,
                 Assembly = ApplicationInformation.Assembly,    
             },
-            FrontolInformation = frontolInfo
+            
+            FrontolInformation = frontolInfo,
+            
+            Licenses = _atolLicenseService.FromFiles(),
         };
         
         _logger.LogDebug(state.ToString());
