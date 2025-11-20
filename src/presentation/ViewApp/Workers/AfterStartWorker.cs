@@ -49,7 +49,7 @@ namespace ViewApp.Workers
             if (settings.DatabaseConnection.DatabasePath != string.Empty)
                 return true;
 
-            var dbPathExtraction = await _frontolIni.MainGdbPath();
+            var dbPathExtraction = await _frontolIni.FrontolDbPath();
 
             if (dbPathExtraction.IsFailure)
             {
@@ -57,7 +57,8 @@ namespace ViewApp.Workers
                 return false;
             }
 
-            settings.DatabaseConnection.DatabasePath = dbPathExtraction.Value;
+            settings.DatabaseConnection.DatabasePath = dbPathExtraction.Value.mainPath;
+            settings.DatabaseConnection.LogDatabasePath = dbPathExtraction.Value.logPath;
             await _parametersService.Update(settings);
 
             return true;
