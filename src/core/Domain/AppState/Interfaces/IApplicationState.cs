@@ -1,4 +1,6 @@
-﻿namespace Domain.AppState.Interfaces
+﻿using Domain.Messages.Dto;
+
+namespace Domain.AppState.Interfaces
 {
     public interface IApplicationState
     {
@@ -7,5 +9,8 @@
         
         void UpdateNeedRestart(bool need);
         bool NeedRestart();
+
+        void NewVersionInformationUpdate(NewVersionResponse value);
+        NewVersionResponse NewVersionInformation();
     }
 }
