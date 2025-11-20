@@ -4,6 +4,7 @@
     <option name="locations">
       <list>
         <option value="$PROJECT_DIR$/builds/x64 windows" />
+        <option value="$PROJECT_DIR$/builds/x86 windows" />
       </list>
     </option>
   </component>
