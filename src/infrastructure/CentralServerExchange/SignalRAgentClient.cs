@@ -1,4 +1,5 @@
 using Domain.Agent.Dto;
+using Domain.AppState.Interfaces;
 using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Dto;
@@ -12,6 +13,7 @@ public class SignalRAgentClient
 {
     private readonly ILogger<SignalRAgentClient> _logger;
     private readonly IParametersService _parametersService;
+    private readonly IApplicationState _applicationState;
     
     private string _hubUrl = string.Empty;
     private string _agentId = string.Empty;
@@ -21,10 +23,11 @@ public class SignalRAgentClient
     
     private bool _isRegistered;
 
-    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService)
+    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState)
     {
         _logger = logger;
         _parametersService = parametersService;
+        _applicationState = applicationState;
     }
     
     public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
@@ -50,6 +53,7 @@ public class SignalRAgentClient
 
         _connection.On<string>("AgentRegistered", OnAgentRegistered);
         _connection.On<string>("ReceiveMessage", OnReceiveMessage);
+        _connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
 
         _connection.Reconnecting += error =>
         {
@@ -98,7 +102,7 @@ public class SignalRAgentClient
             return;
         }
        
-        var agentData = new Message()
+        var agentData = new AgentStateResponse()
         {
             AgentToken = _agentId,
             AgentInformation = new AgentData
@@ -129,6 +133,12 @@ public class SignalRAgentClient
     {
         _logger.LogInformation("Получено сообщение от сервера: {Message}", message);
     }
+
+    private void OnNewVersionResponse(NewVersionResponse message) 
+    {
+        _logger.LogInformation("Получена информация о обновлении от сервера: {message}", message);    
+        _applicationState.NewVersionInformationUpdate(message);
+    }
     
     public async Task StopAsync()
     {
@@ -142,8 +152,10 @@ public class SignalRAgentClient
         _logger.LogInformation("Клиент SignalR остановлен");
     }
     
-    public async Task SendAgentState(Message message)
+    public async Task SendAgentState(AgentStateResponse agentStateResponse)
     {
+        const string methodName = "AgentStateMessage";
+        
         if (_connection == null || _connection.State != HubConnectionState.Connected)
         {
             _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
@@ -159,9 +171,9 @@ public class SignalRAgentClient
 
         try
         {
-            message.AgentToken = _agentId;
+            agentStateResponse.AgentToken = _agentId;
 
-            await _connection.InvokeAsync("AgentState", message, _cancellationTokenSource.Token);
+            await _connection.InvokeAsync(methodName, agentStateResponse, _cancellationTokenSource.Token);
             _logger.LogDebug("Данные агента отправлены на сервер");
         }
         catch (Exception ex)
@@ -169,4 +181,42 @@ public class SignalRAgentClient
             _logger.LogError(ex, "Ошибка при отправке данных агента");
         }
     }
+    
+    public async Task AskNewVersion()
+    {
+        const string methodName = "NewVersionRequestMessage";
+        
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
+            return;
+        }
+
+        if (!_isRegistered)
+        {
+            _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");
+            await RegisterAgentAsync();
+            return;
+        }
+
+        NewVersionRequest message = new()
+        {
+            AgentToken = _agentId,
+            AgentInformation = new AgentData
+            {
+                Version = ApplicationInformation.Version,
+                Assembly = ApplicationInformation.Assembly,
+            }
+        };
+        
+        try
+        {
+            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при отправке данных агента");
+        }
+    }
+    
 }

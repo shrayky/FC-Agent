@@ -10,12 +10,14 @@ public class ExchangeWorker : BackgroundService
     private readonly ILogger<ExchangeWorker> _logger;
     private readonly SignalRAgentClient _signalRClient;
     private readonly FrontolStateService _frontolStateService;
+    private readonly AgentUpdateService _agentUpdateService;
     
-    public ExchangeWorker(ILogger<ExchangeWorker> logger, IParametersService parametersService, SignalRAgentClient signalRClient, FrontolStateService frontolStateService)
+    public ExchangeWorker(ILogger<ExchangeWorker> logger, IParametersService parametersService, SignalRAgentClient signalRClient, FrontolStateService frontolStateService, AgentUpdateService agentUpdateService)
     {
         _logger = logger;
         _signalRClient = signalRClient;
         _frontolStateService = frontolStateService;
+        _agentUpdateService = agentUpdateService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,8 +37,9 @@ public class ExchangeWorker : BackgroundService
                 await _signalRClient.StartAsync();
 
             var agentData = await _frontolStateService.Current();
-            
             await _signalRClient.SendAgentState(agentData);
+
+            await _agentUpdateService.AskNewVersionDownload(_signalRClient);
 
 #if DEBUG
     await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);

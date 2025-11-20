@@ -24,7 +24,7 @@ public class FrontolStateService
         _atolLicenseService = atolLicenseService;
     }
 
-    public async Task<Message> Current()
+    public async Task<AgentStateResponse> Current()
     {
         var settings = await _parametersService.Current();
 
@@ -46,7 +46,7 @@ public class FrontolStateService
                 frontolInfo.Settings.GlobalControl = globalConfig.Value;
         }
         
-        Message state = new()
+        AgentStateResponse state = new()
         {
             AgentToken = settings.CentralServerSettings.Token,
             
