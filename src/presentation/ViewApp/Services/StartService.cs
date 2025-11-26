@@ -1,7 +1,7 @@
 using Domain.Configuration.Constants;
 using Shared.Installer;
 
-namespace ViewApp.Install;
+namespace ViewApp.Services;
 
 public static class StartService
 {

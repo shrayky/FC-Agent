@@ -46,7 +46,8 @@ namespace ViewApp.Workers
         {
             var settings = await _parametersService.Current();
 
-            if (settings.DatabaseConnection.DatabasePath != string.Empty)
+            if (!string.IsNullOrEmpty(settings.DatabaseConnection.DatabasePath) &&
+                !string.IsNullOrEmpty(settings.DatabaseConnection.LogDatabasePath))
                 return true;
 
             var dbPathExtraction = await _frontolIni.FrontolDbPath();
