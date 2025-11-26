@@ -50,8 +50,10 @@ namespace Shared.Json
                 {
                     return reader.GetInt64().ToString();
                 }
-
-                return reader.GetString();
+                
+                var answer = reader.GetString();
+                
+                return answer ?? string.Empty;
             }
 
             public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)

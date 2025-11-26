@@ -194,9 +194,7 @@ public class WindowsInstaller : IInstaller
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
         
-        ServiceController? existingService;
-        
-        existingService = GetServices().FirstOrDefault(ser => ser.ServiceName == _appName);
+        var existingService = GetServices().FirstOrDefault(ser => ser.ServiceName == _appName);
 
         if (existingService == null)
         {
