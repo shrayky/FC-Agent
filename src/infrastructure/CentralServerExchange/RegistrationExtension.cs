@@ -8,6 +8,12 @@ namespace CentralServerExchange
     {
         public static IServiceCollection AddCentralServerClient(this IServiceCollection services)
         {
+
+            services.AddHttpClient<AgentUpdateService>("UpdateDownloader", client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(30);
+            });
+            
             services.AddSingleton<FrontolStateService>();
             services.AddSingleton<AtolLicenseService>();
             services.AddSingleton<AgentUpdateService>();
