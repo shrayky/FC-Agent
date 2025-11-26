@@ -5,7 +5,7 @@ using Domain.Configuration;
 using FrontolDatabase;
 using Logger;
 using ViewApp.Components;
-using ViewApp.Install;
+using ViewApp.Services;
 using ViewApp.Workers;
 
 const int ipPort = 2587;
