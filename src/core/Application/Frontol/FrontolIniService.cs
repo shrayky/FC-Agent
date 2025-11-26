@@ -63,6 +63,9 @@ public class FrontolIniService : IFrontolIni
         {
             var line = iniLine.Trim();
             
+            if (!line.Contains('='))
+                continue;
+            
             var keyValue = line.Split("=");
             var value = keyValue[1];
 
