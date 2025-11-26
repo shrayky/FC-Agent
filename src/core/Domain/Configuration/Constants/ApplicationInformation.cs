@@ -2,10 +2,10 @@
 {
     public static class ApplicationInformation
     {
-        public const string Name = "FrontolConfiguratorAgent";
+        public const string Name = "fc";
         public const string Manufacture = "Automation";
-        public const string Description = "Служба для централизованной настройки баз данных фронтола";
-        public const string ServiceName = "DS:Frontol configurator agent";
+        public const string Description = "Служба агента для централизованной настройки баз данных фронтола";
+        public const string ServiceName = "DS:FC Agent";
         
         public const int Version = 1;
         public const int Assembly = 1;
