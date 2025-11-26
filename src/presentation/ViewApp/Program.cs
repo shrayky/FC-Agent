@@ -4,7 +4,6 @@ using Configuration;
 using Domain.Configuration;
 using FrontolDatabase;
 using Logger;
-using ViewApp.Components;
 using ViewApp.Services;
 using ViewApp.Workers;
 
@@ -22,10 +21,9 @@ Parameters appSettings = new();
 if (settingsLoadResult.IsSuccess)                                   
     appSettings = settingsLoadResult.Value;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls($"http://+:{appSettings.ServerSettings.ApiIpPort}");
+builder.WebHost.UseUrls($"http://0.0.0.0:{appSettings.ServerSettings.ApiIpPort}");
 
 builder.Services.AddMemoryCache();
 builder.Services.AddConfigurationServices();
@@ -35,8 +33,11 @@ builder.Services.AddCentralServerClient();
 builder.Services.AddFrontolDatabase(appSettings.DatabaseConnection);
 builder.Services.AddHostedService<AfterStartWorker>();
 
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+// Добавить Razor Pages вместо Blazor
+builder.Services.AddRazorPages();
+
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 if (OperatingSystem.IsWindows())
 {
@@ -47,13 +48,12 @@ var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error");
 }
 
 app.UseStaticFiles();
-app.UseAntiforgery();
+app.UseRouting();
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorPages();
 
 await app.RunAsync();
