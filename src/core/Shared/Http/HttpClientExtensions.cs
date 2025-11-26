@@ -1,5 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
 using CSharpFunctionalExtensions;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace Shared.Http
 {
@@ -54,5 +57,83 @@ namespace Shared.Http
                 return Result.Failure<HttpResponseMessage, string>($"Ошибка запроса: {ex.Message}");
             }
         }
+        
+        public static async Task<Result<Stream>> DownloadFileWithResumeAsync(
+            this HttpClient httpClient,
+            string url,
+            string destinationPath,
+            ILogger logger,
+            IProgress<long>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            var retryPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(msg => !msg.IsSuccessStatusCode)
+                .WaitAndRetryAsync(
+                    retryCount: 5,
+                    sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    onRetry: (outcome, timespan, retryCount, context) =>
+                    {
+                        logger.LogWarning("Повтор попытки {RetryCount} загрузки файла через {Timespan}", retryCount, timespan);
+                    });
+
+            try
+            {
+                var fileInfo = new FileInfo(destinationPath);
+                var existingLength = fileInfo.Exists ? fileInfo.Length : 0;
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+                if (existingLength > 0)
+                {
+                    request.Headers.Range = new RangeHeaderValue(existingLength, null);
+                    logger.LogInformation("Продолжаем загрузку с позиции {Position} байт", existingLength);
+                }
+
+                var response = await retryPolicy.ExecuteAsync(async () =>
+                    await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken));
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = $"Ошибка загрузки файла: {response.StatusCode} {response.ReasonPhrase}";
+                    logger.LogError(error);
+                    return Result.Failure<Stream>(error);
+                }
+
+                var totalBytes = existingLength + (response.Content.Headers.ContentLength ?? 0);
+                logger.LogInformation("Загружаем файл. Размер: {Size} байт, докачка: {Resume}", 
+                    totalBytes, existingLength > 0);
+
+                var memoryStream = new MemoryStream();
+                
+                if (existingLength > 0)
+                {
+                    await using var existingFile = File.OpenRead(destinationPath);
+                    await existingFile.CopyToAsync(memoryStream, cancellationToken);
+                }
+
+                await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var buffer = new byte[8192];
+                var totalBytesRead = existingLength;
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer, cancellationToken)) > 0)
+                {
+                    await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                    totalBytesRead += bytesRead;
+                    progress?.Report(totalBytesRead);
+                }
+
+                memoryStream.Position = 0;
+                return Result.Success<Stream>(memoryStream);
+            }
+            catch (Exception ex)
+            {
+                var error = $"Ошибка загрузки файла: {ex.Message}";
+                logger.LogError(ex, error);
+                return Result.Failure<Stream>(error);
+            }
+        }
+        
     }
 }
