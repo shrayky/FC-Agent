@@ -192,6 +192,11 @@ public class SignalRAgentClient
             return;
         }
 
+        var settings = await _parametersService.Current();
+            
+        if (!settings.CentralServerSettings.DownloadNewVersion)
+            return;
+
         if (!_isRegistered)
         {
             _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");

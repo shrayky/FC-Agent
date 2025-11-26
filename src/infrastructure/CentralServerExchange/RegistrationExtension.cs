@@ -10,6 +10,7 @@ namespace CentralServerExchange
         {
             services.AddSingleton<FrontolStateService>();
             services.AddSingleton<AtolLicenseService>();
+            services.AddSingleton<AgentUpdateService>();
             
             services.AddSingleton<SignalRAgentClient>();
             
