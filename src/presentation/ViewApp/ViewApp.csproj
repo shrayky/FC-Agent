@@ -12,8 +12,9 @@
 
         <OptimizationPreference>Size</OptimizationPreference>
 
-        <Version>1.1.0</Version>
+        <Version>1.3.0</Version>
         <AssemblyName>fc</AssemblyName>
+        
     </PropertyGroup>
 
     <ItemGroup>

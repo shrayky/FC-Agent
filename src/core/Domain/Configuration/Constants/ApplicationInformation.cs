@@ -8,7 +8,7 @@
         public const string ServiceName = "DS:FC Agent";
         
         public const int Version = 1;
-        public const int Assembly = 1;
+        public const int Assembly = 3;
 
         public static object Information() => new { Name, Version, Assembly, Description};
     }
