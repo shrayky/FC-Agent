@@ -1,3 +1,4 @@
+using CSharpFunctionalExtensions;
 using Domain.Agent.Dto;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Constants;
@@ -223,5 +224,50 @@ public class SignalRAgentClient
             _logger.LogError(ex, "Ошибка при отправке данных агента");
         }
     }
-    
+
+    public async Task<Result> SendFrontolLogs(List<LogRecord> logs)
+    {
+        const string methodName = "FrontoLogMessage";
+
+        if (logs.Count == 0)
+        {
+            const string err = "Нет логов для отправки.";
+            _logger.LogDebug(err);
+            return Result.Failure(err);
+        }    
+        
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            const string err = "Невозможно отправить данные: соединение не установлено";
+            _logger.LogWarning(err);
+            return Result.Failure(err);
+        }
+
+        if (!_isRegistered)
+        {
+            const string err = "Агент не зарегистрирован. Попытка повторной регистрации...";
+            _logger.LogWarning(err);
+            await RegisterAgentAsync();
+            
+            return  Result.Failure(err);
+        }
+
+        try
+        {
+            FrontolLogsMessage message = new()
+            {
+                AgentToken = _agentId,
+                Logs = logs
+            };
+
+            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+            _logger.LogDebug("Данные логов отправлены на сервер");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при отправке логов");
+        }
+        
+        return Result.Success();
+    }
 }

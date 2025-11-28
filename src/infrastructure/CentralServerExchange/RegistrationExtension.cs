@@ -17,10 +17,12 @@ namespace CentralServerExchange
             services.AddSingleton<FrontolStateService>();
             services.AddSingleton<AtolLicenseService>();
             services.AddSingleton<AgentUpdateService>();
+            services.AddSingleton<FrontolLogsService>();
             
             services.AddSingleton<SignalRAgentClient>();
             
             services.AddHostedService<ExchangeWorker>();
+            services.AddHostedService<UpdateDownloadWorker>();
 
             return services;
         }
