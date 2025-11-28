@@ -66,6 +66,9 @@ namespace Shared.Http
             IProgress<long>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            logger.LogDebug("Будет скачен файл в {destinationPath}", destinationPath);
+            logger.LogDebug("Из источника {address}", url);
+            
             var retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .OrResult(msg => !msg.IsSuccessStatusCode)
@@ -74,7 +77,8 @@ namespace Shared.Http
                     sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
-                        logger.LogWarning("Повтор попытки {RetryCount} загрузки файла через {Timespan}", retryCount, timespan);
+                        var statusCode = outcome.Result?.StatusCode.ToString() ?? outcome.Exception?.GetType().Name ?? "Unknown";
+                        logger.LogWarning("Попытка запроса файла вернула код ответа {statusCode}, повтор попытки {RetryCount} загрузки файла через {Timespan}", statusCode, retryCount, timespan);
                     });
 
             try
@@ -82,17 +86,21 @@ namespace Shared.Http
                 var fileInfo = new FileInfo(destinationPath);
                 var existingLength = fileInfo.Exists ? fileInfo.Length : 0;
 
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-                if (existingLength > 0)
-                {
-                    request.Headers.Range = new RangeHeaderValue(existingLength, null);
-                    logger.LogInformation("Продолжаем загрузку с позиции {Position} байт", existingLength);
-                }
-
                 var response = await retryPolicy.ExecuteAsync(async () =>
-                    await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken));
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
+                    if (existingLength > 0)
+                    {
+                        request.Headers.Range = new RangeHeaderValue(existingLength, null);
+                        logger.LogInformation("Продолжаем загрузку с позиции {Position} байт", existingLength);
+                    }
+
+                    return await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                });
+
+                logger.LogDebug("Запрос файла вернул код ответа {code}",  response.StatusCode);
+                
                 if (!response.IsSuccessStatusCode)
                 {
                     var error = $"Ошибка загрузки файла: {response.StatusCode} {response.ReasonPhrase}";

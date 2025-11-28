@@ -7,11 +7,13 @@ public class ExchangeWorker : BackgroundService
 {
     private readonly SignalRAgentClient _signalRClient;
     private readonly FrontolStateService _frontolStateService;
+    private readonly FrontolLogsService _frontolLogsService;
     
-    public ExchangeWorker(SignalRAgentClient signalRClient, FrontolStateService frontolStateService)
+    public ExchangeWorker(SignalRAgentClient signalRClient, FrontolStateService frontolStateService, FrontolLogsService frontolLogsService)
     {
         _signalRClient = signalRClient;
         _frontolStateService = frontolStateService;
+        _frontolLogsService = frontolLogsService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,6 +36,11 @@ public class ExchangeWorker : BackgroundService
             {
                 var agentData = await _frontolStateService.Current();
                 await _signalRClient.SendAgentState(agentData);
+
+                var logs = await _frontolLogsService.Collect();
+                var sendLogsResult = await _signalRClient.SendFrontolLogs(logs);
+                if (sendLogsResult.IsSuccess)
+                    _frontolLogsService.SetMaxLogId(logs.Max(f => f.Id));
 
                 await _signalRClient.AskNewVersion();
             }
