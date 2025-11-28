@@ -1,0 +1,97 @@
+@page "/"
+@using Domain.Configuration.Constants
+@model ViewApp.Pages.SettingsModel
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.AppSettings?.ServerSettings?.Name) 
+        ? "FC-Agent" 
+        : $"FC-Agent:{Model.AppSettings.ServerSettings.Name}";
+}
+
+<h3 class="page-title">Настройки FC-Agent</h3>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="alert alert-info">@Model.Message</div>
+}
+
+<form method="post">
+    <fieldset class="settings-card">
+        <legend>Центральный сервер</legend>
+        <div class="form-group mb-3">
+            <label class="form-label">Адрес</label>
+            <input type="text" class="form-control" asp-for="AppSettings.CentralServerSettings.Address" />
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Токен</label>
+            <input type="text" class="form-control" asp-for="AppSettings.CentralServerSettings.Token" />
+        </div>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="AppSettings.CentralServerSettings.DownloadNewVersion" />
+            <label class="form-check-label">Скачивать новую версию</label>
+        </div>
+    </fieldset>
+    
+    <fieldset class="settings-card">
+        <legend>Основная база данных Frontol</legend>
+        <div class="form-group mb-3">
+            <label class="form-label">Путь к Main.gdb</label>
+            <input type="text" class="form-control" asp-for="AppSettings.DatabaseConnection.DatabasePath" />
+        </div>
+        <legend>База данных логов Frontol</legend>
+        <div class="form-group mb-3">
+            <label class="form-label">Путь к Main.gdb</label>
+            <input type="text" class="form-control" asp-for="AppSettings.DatabaseConnection.LogDatabasePath" />
+        </div>
+        <div class="row g-3">
+            <div class="form-group col-6 mb-3">
+                <label class="form-label">Пользователь Firebird</label>
+                <input type="text" class="form-control" asp-for="AppSettings.DatabaseConnection.UserName" />
+            </div>
+            <div class="form-group col-6 mb-3">
+                <label class="form-label">Пароль Firebird</label>
+                <input type="text" class="form-control" asp-for="AppSettings.DatabaseConnection.Password" />
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="settings-card">
+        <legend>Логирование</legend>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="AppSettings.LoggerSettings.IsEnabled" />
+            <label class="form-check-label">Включить логирование</label>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Уровень логирования</label>
+            <select class="form-control form-select" asp-for="AppSettings.LoggerSettings.LogLevel">
+                @foreach (var level in Model.LogLevels)
+                {
+                    <option value="@level">@level</option>
+                }
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Глубина (дней)</label>
+            <input type="number" class="form-control" asp-for="AppSettings.LoggerSettings.LogDepth" />
+        </div>
+    </fieldset>
+
+    <fieldset class="settings-card">
+        <legend>Локальный сервер</legend>
+        <div class="form-group mb-3">
+            <label class="form-label">Порт API</label>
+            <input type="number" class="form-control" asp-for="AppSettings.ServerSettings.ApiIpPort" />
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Имя агента</label>
+            <input type="text" class="form-control" asp-for="AppSettings.ServerSettings.Name" />
+        </div>
+
+        <div>
+            <label class="form-label">Версия @ApplicationInformation.Version.@ApplicationInformation.Assembly</label>
+        </div>
+                
+    </fieldset>
+
+    <button class="btn btn-primary btn-save" type="submit">Сохранить</button>
+</form>
