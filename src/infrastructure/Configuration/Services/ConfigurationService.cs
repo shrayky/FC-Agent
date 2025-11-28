@@ -77,6 +77,7 @@ namespace Configuration.Services
 
             need = (false
                 || currentSettings.DatabaseConnection.DatabasePath != newParameters.DatabaseConnection.DatabasePath
+                || currentSettings.DatabaseConnection.LogDatabasePath != newParameters.DatabaseConnection.LogDatabasePath
                 || currentSettings.DatabaseConnection.UserName != newParameters.DatabaseConnection.UserName
                 || currentSettings.DatabaseConnection.Password != newParameters.DatabaseConnection.Password
                 || currentSettings.ServerSettings.ApiIpPort != newParameters.ServerSettings.ApiIpPort
