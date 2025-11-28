@@ -25,10 +25,10 @@ namespace ViewApp.Workers
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-                
                 CheckRestartApplication();
                 _ = await FillFrontolPathSettings();
+                
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
         
