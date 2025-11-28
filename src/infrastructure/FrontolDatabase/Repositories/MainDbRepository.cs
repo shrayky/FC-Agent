@@ -24,8 +24,9 @@ public class MainDbRepository : IFrontolMainDb
     private async Task<int> NextChangeId()
     {
         var value = await _ctx.Database
-            .ExecuteSqlRawAsync($"SELECT GEN_ID(GCHNG, 1) FROM RDB$DATABASE");
-
+            .SqlQueryRaw<int>("SELECT GEN_ID(GCHNG, 1) FROM RDB$DATABASE")
+            .SingleAsync();
+        
         return value;
     }
 
