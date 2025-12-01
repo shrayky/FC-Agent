@@ -7,12 +7,12 @@
         
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 
-        <DebugType>none</DebugType>
-        <DebugSymbols>false</DebugSymbols>
+        <DebugType>portable</DebugType>
+        <DebugSymbols>true</DebugSymbols>
 
         <OptimizationPreference>Size</OptimizationPreference>
 
-        <Version>1.8.0</Version>
+        <Version>1.9.0</Version>
         <AssemblyName>fc</AssemblyName>
         
     </PropertyGroup>
