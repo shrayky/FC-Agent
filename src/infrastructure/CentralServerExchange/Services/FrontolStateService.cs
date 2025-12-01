@@ -28,7 +28,7 @@ public class FrontolStateService
     {
         var settings = await _parametersService.Current();
 
-        var frontolInfo = new FrontolInformation();
+        var frontolVersion = string.Empty;
         
         if (!string.IsNullOrEmpty(settings.DatabaseConnection.DatabasePath))
         {
@@ -38,12 +38,7 @@ public class FrontolStateService
             var version = await repository.Version();
             
             if (version.IsSuccess) 
-                frontolInfo.Version = version.Value;
-
-            var globalConfig = await repository.GetGlobalControlConfig();
-            
-            if (globalConfig.IsSuccess)
-                frontolInfo.Settings.GlobalControl = globalConfig.Value;
+                frontolVersion = version.Value;
         }
         
         AgentStateResponse state = new()
@@ -56,8 +51,7 @@ public class FrontolStateService
                 Assembly = ApplicationInformation.Assembly,    
             },
             
-            FrontolInformation = frontolInfo,
-            
+            FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),
         };
         

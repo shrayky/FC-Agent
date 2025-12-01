@@ -10,6 +10,6 @@ public record AgentStateResponse : IMessage
     public string AgentToken { get; set; } = string.Empty;
     public MessageType MessageType { get; set; } = MessageType.AgentState;
     public AgentData AgentInformation { get; set; } = new();
-    public FrontolInformation FrontolInformation { get; set; } = new();
+    public string FrontolVersion { get; set; } = string.Empty;
     public List<LicenseInformation> Licenses { get; set; } = [];
 }

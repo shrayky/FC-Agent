@@ -111,7 +111,6 @@ public class SignalRAgentClient
                 Version = ApplicationInformation.Version,
                 Assembly = ApplicationInformation.Assembly,    
             },
-            FrontolInformation = new FrontolInformation()
         };
         
         try
