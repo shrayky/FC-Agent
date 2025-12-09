@@ -145,15 +145,18 @@ public class SignalRAgentClient
         _applicationState.NewVersionInformationUpdate(message);
     }
 
-    private async void OnFrontolSettingsRequest(FrontolSettingsRequest message)
+    private async Task OnFrontolSettingsRequest(FrontolSettingsRequest message)
     {
         _logger.LogInformation("Получен запрос настроек фронтола от сервера: {message}", message);
 
         var frontolSettings = await _frontolSettingsService.ReadFrontolSettings();
-        
+
         if (frontolSettings.IsFailure)
+        {
             _logger.LogError(frontolSettings.Error);
-        
+            return;
+        }
+
         const string methodName = "FrontolSettings";
         
         if (_connection == null || _connection.State != HubConnectionState.Connected)
@@ -273,7 +276,7 @@ public class SignalRAgentClient
 
     public async Task<Result> SendFrontolLogs(List<LogRecord> logs)
     {
-        const string methodName = "FrontoLogMessage";
+        const string methodName = "FrontolLogMessage";
 
         if (logs.Count == 0)
         {
