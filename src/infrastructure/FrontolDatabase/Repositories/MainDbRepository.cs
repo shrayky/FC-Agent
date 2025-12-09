@@ -3,6 +3,7 @@ using Domain.Frontol.Dto;
 using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Metadata;
+using FrontolDatabase.Entitys;
 using FrontolDatabase.Mapping;
 using FrontolDatabase.Parsers;
 using Microsoft.EntityFrameworkCore;
@@ -111,6 +112,8 @@ public class MainDbRepository : IFrontolMainDb
         globalControl.ApplyToSettings(settings, Formatter);
 
         await _ctx.SaveChangesAsync();
+        
+        await Restart();
 
         return Result.Success();
     }
@@ -138,5 +141,123 @@ public class MainDbRepository : IFrontolMainDb
         var control = settings.ApplyFromSettings<GlobalControl>(Parser);
 
         return Result.Success(control);
+    }
+
+    public async Task<Result<List<UserProfile>>> GetUserProfiles()
+    {
+        if (_ctx.UserProfiles == null)
+            return Result.Failure<List<UserProfile>>("Не удалось открыть UserProfiles");
+        
+        if (_ctx.UserProfileSecurity == null)
+            return Result.Failure<List<UserProfile>>("Не удалось открыть UserProfileSecurity");
+
+        var profiles = await _ctx.UserProfiles.AsNoTracking().ToListAsync();
+        var security = await _ctx.UserProfileSecurity.AsNoTracking().ToListAsync();
+
+        List<UserProfile> answer = [];
+
+        foreach (var profileData in profiles)
+        {
+            var profileSecurity = security.Where(p => p.ProfileId == profileData.Id && p.Value == 1)
+                .Select(s => new UserProfileSecurity
+                {
+                    Id = s.SecurityCode,
+                    Value = s.Value,
+                    Name = string.Empty
+                })
+                .ToList();
+            
+            var profile = new UserProfile()
+            {
+                Code = profileData.Code,
+                Name = profileData.Name,
+                DontLoadUserWithThisProfile = profileData.DontChangeUsersOnExchange,
+                ForSelfieMode = profileData.ForSelfieUser,
+                SkipSupervisorMode = profileData.SkipSupervisorMode,
+                Securities = profileSecurity,
+            };
+            
+            answer.Add(profile);
+        }
+        
+        return Result.Success(answer);
+    }
+
+    public async Task<Result> LoadUserProfiles(List<UserProfile> userProfiles)
+    {
+        if (_ctx.UserProfiles == null)
+            return Result.Failure("Не удалось открыть UserProfiles");
+        
+        if (_ctx.UserProfileSecurity == null)
+            return Result.Failure("Не удалось открыть UserProfileSecurity");
+
+        foreach (var userProfile in userProfiles)
+        {
+            var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == userProfile.Code);
+
+            if (existProfile is null)
+            {
+                Profile profile = new()
+                {
+                    Code = userProfile.Code,
+                    Name = userProfile.Name,
+                    DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile,
+                    ForSelfieUser = userProfile.ForSelfieMode,
+                    SkipSupervisorMode = userProfile.SkipSupervisorMode,
+                };
+                
+                await _ctx.UserProfiles.AddAsync(profile);
+            }
+            else
+            {
+                existProfile.Name = userProfile.Name;
+                existProfile.DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile;
+                existProfile.ForSelfieUser = userProfile.ForSelfieMode;
+                existProfile.SkipSupervisorMode = userProfile.SkipSupervisorMode;
+                
+                _ctx.UserProfiles.Update(existProfile);
+            }
+            
+            await _ctx.SaveChangesAsync();
+            
+            var profileId = _ctx.UserProfiles.FirstOrDefault(p => p.Code == userProfile.Code)?.Id;
+            
+            if (profileId == null)
+                continue;
+            
+            var existSecurities = await _ctx.UserProfileSecurity.Where(p => p.ProfileId == profileId).AsNoTracking().ToListAsync();
+
+            foreach (var existSecurity in existSecurities)
+            {
+                var security = userProfile.Securities.Find(p => p.Id == existSecurity.SecurityCode);
+
+                if (security is null)
+                {
+                    var newSecurity = new Security()
+                    {
+                        ProfileId = profileId ?? 0,
+                        SecurityCode = existSecurity.SecurityCode,
+                        Value = existSecurity.Value
+                    };
+                    
+                    _ctx.UserProfileSecurity.Add(newSecurity);
+                }
+                else
+                {
+                    if (security.Value == existSecurity.Value)
+                        continue;
+                    
+                    existSecurity.Value =security.Value;
+                    
+                    _ctx.UserProfileSecurity.Update(existSecurity);
+                }
+            }
+            
+            await _ctx.SaveChangesAsync();
+        }
+        
+        await Restart();
+        
+        return Result.Success();
     }
 }
