@@ -7,12 +7,12 @@ namespace FrontolDatabase.Entitys;
 public class Security
 {
     [Key]
-    [Column("PROGILEID")]
+    [Column("PROFILEID")]
     public int ProfileId { get; set; }
     
-    [Column("SECURITU")]
+    [Column("SECURITY")]
     public int SecurityCode {get; set;}
     
-    [Column("SECURITUVALUE")]
+    [Column("SECURITYVALUE")]
     public int Value {get; set;}
 }

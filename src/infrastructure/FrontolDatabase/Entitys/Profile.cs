@@ -20,7 +20,7 @@ public class Profile
     [Column("SKIPMODE")]
     public bool SkipSupervisorMode { get; set; }
     
-    [Column("FRONTOLSEILFIE")]
+    [Column("FRONTOLSELFIE")]
     public bool ForSelfieUser { get; set; }
     
     [Column("BASE")]

@@ -22,19 +22,14 @@ public class FrontolSettingsService
         using var scope = _serviceScope.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
 
-        var globalConfigTask = repository.GetGlobalControlConfig();
-        var userProfilesTask = repository.GetUserProfiles();
-
-        await Task.WhenAll(globalConfigTask, userProfilesTask);
-        
-        var globalConfig = globalConfigTask.Result;
-        var userProfiles = userProfilesTask.Result;
+        var globalConfig = await repository.GetGlobalControlConfig();
+        var userProfiles = await repository.GetUserProfiles();
         
         if (globalConfig.IsFailure)
-            return Result.Failure<FrontolSettings>(globalConfigTask.Result.Error);
+            return Result.Failure<FrontolSettings>(globalConfig.Error);
         
         if  (userProfiles.IsFailure)
-            return Result.Failure<FrontolSettings>(userProfilesTask.Result.Error);
+            return Result.Failure<FrontolSettings>(userProfiles.Error);
 
         var packet = new FrontolSettings()
         {
