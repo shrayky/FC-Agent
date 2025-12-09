@@ -4,5 +4,6 @@ public enum MessageType
 {
     AgentState,
     NewVersionAsk,
-    FrontolLog
+    FrontolLog,
+    FrontolSettings
 }

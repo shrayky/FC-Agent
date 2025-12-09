@@ -1,3 +1,4 @@
+using CentralServerExchange.Services;
 using CSharpFunctionalExtensions;
 using Domain.Agent.Dto;
 using Domain.AppState.Interfaces;
@@ -5,6 +6,7 @@ using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Dto;
 using Domain.Messages.Dto;
+using Domain.Messages.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +17,7 @@ public class SignalRAgentClient
     private readonly ILogger<SignalRAgentClient> _logger;
     private readonly IParametersService _parametersService;
     private readonly IApplicationState _applicationState;
+    private readonly FrontolSettingsService _frontolSettingsService;
     
     private string _hubUrl = string.Empty;
     private string _agentId = string.Empty;
@@ -24,11 +27,12 @@ public class SignalRAgentClient
     
     private bool _isRegistered;
 
-    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState)
+    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState, FrontolSettingsService frontolSettingsService)
     {
         _logger = logger;
         _parametersService = parametersService;
         _applicationState = applicationState;
+        _frontolSettingsService = frontolSettingsService;
     }
     
     public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
@@ -55,6 +59,7 @@ public class SignalRAgentClient
         _connection.On<string>("AgentRegistered", OnAgentRegistered);
         _connection.On<string>("ReceiveMessage", OnReceiveMessage);
         _connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
+        _connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
 
         _connection.Reconnecting += error =>
         {
@@ -138,6 +143,48 @@ public class SignalRAgentClient
     {
         _logger.LogInformation("Получена информация о обновлении от сервера: {message}", message);    
         _applicationState.NewVersionInformationUpdate(message);
+    }
+
+    private async void OnFrontolSettingsRequest(FrontolSettingsRequest message)
+    {
+        _logger.LogInformation("Получен запрос настроек фронтола от сервера: {message}", message);
+
+        var frontolSettings = await _frontolSettingsService.ReadFrontolSettings();
+        
+        if (frontolSettings.IsFailure)
+            _logger.LogError(frontolSettings.Error);
+        
+        const string methodName = "FrontolSettings";
+        
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
+            return;
+        }
+
+        if (!_isRegistered)
+        {
+            _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");
+            await RegisterAgentAsync();
+            return;
+        }
+
+        var answerMessage = new FrontolSettingsResponse()
+        {
+            AgentToken = _agentId,
+            MessageType = MessageType.FrontolSettings,
+            Settings = frontolSettings.Value
+        };
+        
+        try
+        {
+            await _connection.InvokeAsync(methodName, answerMessage, _cancellationTokenSource.Token);
+            _logger.LogDebug("Данные агента отправлены на сервер");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при отправке данных агента");
+        }
     }
     
     public async Task StopAsync()

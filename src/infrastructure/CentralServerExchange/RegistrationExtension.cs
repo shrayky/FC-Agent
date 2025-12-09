@@ -18,6 +18,7 @@ namespace CentralServerExchange
             services.AddSingleton<AtolLicenseService>();
             services.AddSingleton<AgentUpdateService>();
             services.AddSingleton<FrontolLogsService>();
+            services.AddSingleton<FrontolSettingsService>();
             
             services.AddSingleton<SignalRAgentClient>();
             

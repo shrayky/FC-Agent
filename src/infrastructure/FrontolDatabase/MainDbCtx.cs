@@ -8,6 +8,8 @@ public class MainDbCtx : DbContext
 {
     public DbSet<CustomDb>? CustomDb { get; set; }
     public DbSet<Settings>? Settings { get; set; }
+    public DbSet<Profile>? UserProfiles { get; set; }
+    public DbSet<Security>? UserProfileSecurity { get; set; }
     
     private readonly string _connectionString = string.Empty;   
     
@@ -37,6 +39,11 @@ public class MainDbCtx : DbContext
         
         modelBuilder.Entity<Settings>()
             .HasKey(k => new { k.Id });
+        
+        modelBuilder.Entity<Profile>()
+            .HasKey(k => new { k.Id });
+        
+        modelBuilder.Entity<Security>()
+            .HasKey(k => new { k.ProfileId });
     }
-    
 }
