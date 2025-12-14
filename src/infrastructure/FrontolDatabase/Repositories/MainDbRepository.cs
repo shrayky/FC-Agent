@@ -220,6 +220,7 @@ public class MainDbRepository : IFrontolMainDb
                 {
                     Profile profile = new()
                     {
+                        Id = await NextChangeId(),
                         Code = userProfile.Code,
                         Name = userProfile.Name,
                         DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile,
