@@ -34,6 +34,10 @@ public class MainDbCtx : DbContext
     {
         base.OnModelCreating(modelBuilder);
         
+        var boolToIntConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<bool, int>(
+            v => v ? 1 : 0,
+            v => v != 0);
+        
         modelBuilder.Entity<CustomDb>()
             .HasKey(k => new { k.Code });
         
