@@ -44,6 +44,6 @@ public class MainDbCtx : DbContext
             .HasKey(k => new { k.Id });
         
         modelBuilder.Entity<Security>()
-            .HasKey(k => new { k.ProfileId });
+            .HasKey(k => new { k.ProfileId, k.SecurityCode });
     }
 }

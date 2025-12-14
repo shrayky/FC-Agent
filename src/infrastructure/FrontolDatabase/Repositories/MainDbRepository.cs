@@ -218,6 +218,8 @@ public class MainDbRepository : IFrontolMainDb
 
                     var profileId = profile.Id;
 
+                    var securitiesToAdd = new List<Security>();
+                    
                     foreach (var securityCode in defaultSecurityCodes)
                     {
                         var securityValue = userProfile.Securities.Any(s => s.Id == securityCode) ? 1 : 0;
@@ -229,8 +231,10 @@ public class MainDbRepository : IFrontolMainDb
                             Value = securityValue
                         };
 
-                        await _ctx.UserProfileSecurity.AddAsync(newSecurity);
+                        securitiesToAdd.Add(newSecurity);
                     }
+                    
+                    await _ctx.UserProfileSecurity.AddRangeAsync(securitiesToAdd);
                 }
                 else
                 {
@@ -243,21 +247,33 @@ public class MainDbRepository : IFrontolMainDb
 
                     var existSecurities = await _ctx.UserProfileSecurity
                         .Where(p => p.ProfileId == profileId)
+                        .AsNoTracking()
                         .ToListAsync();
 
                     var userProfileSecuritiesDict = userProfile.Securities.ToDictionary(s => s.Id, s => s.Value);
 
-                    foreach (var existSecurity in existSecurities)
+                    var securitiesToAdd = new List<Security>();
+                    
+                    foreach (var securityCode in defaultSecurityCodes)
                     {
-                        if (userProfileSecuritiesDict.TryGetValue(existSecurity.SecurityCode, out var newValue))
+                        var existSecurity = existSecurities.FirstOrDefault(s => s.SecurityCode == securityCode);
+    
+                        if (existSecurity != null)
                         {
-                            if (existSecurity.Value != newValue)
-                                existSecurity.Value = newValue;
+                            var trackedSecurity = await _ctx.UserProfileSecurity
+                                .FirstOrDefaultAsync(s => s.ProfileId == profileId && s.SecurityCode == securityCode);
+        
+                            if (trackedSecurity != null)
+                                trackedSecurity.Value = userProfileSecuritiesDict.TryGetValue(securityCode, out var value) ? value : 0;
                         }
                         else
                         {
-                            if (existSecurity.Value != 0)
-                                existSecurity.Value = 0;
+                            var newValue = userProfileSecuritiesDict.TryGetValue(securityCode, out var value) ? value : 0;
+                            securitiesToAdd.Add(new Security()
+                            {
+                                SecurityCode = securityCode,
+                                Value = newValue
+                            });
                         }
                     }
 
