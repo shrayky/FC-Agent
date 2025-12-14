@@ -27,11 +27,25 @@ public class MainDbRepository : IFrontolMainDb
     
     private async Task<int> NextChangeId()
     {
-        var value = await _ctx.Database
-            .SqlQueryRaw<int>("SELECT GEN_ID(GCHNG, 1) FROM RDB$DATABASE")
-            .SingleAsync();
+        var connection = _ctx.Database.GetDbConnection();
+        var wasOpen = connection.State == System.Data.ConnectionState.Open;
+    
+        if (!wasOpen)
+            await connection.OpenAsync();
+    
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT GEN_ID(GCHNG, 1) FROM RDB$DATABASE";
         
-        return value;
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result ?? 0);
+        }
+        finally
+        {
+            if (!wasOpen)
+                await connection.CloseAsync();
+        }
     }
 
     public async Task<Result<string>> Version()
