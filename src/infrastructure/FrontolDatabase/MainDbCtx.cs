@@ -47,6 +47,18 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<Profile>()
             .HasKey(k => new { k.Id });
         
+        modelBuilder.Entity<Profile>()
+            .Property(p => p.SkipSupervisorMode)
+            .HasConversion(boolToIntConverter);
+        
+        modelBuilder.Entity<Profile>()
+            .Property(p => p.DontChangeUsersOnExchange)
+            .HasConversion(boolToIntConverter);
+        
+        modelBuilder.Entity<Profile>()
+            .Property(p => p.ForSelfieUser)
+            .HasConversion(boolToIntConverter);
+        
         modelBuilder.Entity<Security>()
             .HasKey(k => new { k.ProfileId, k.SecurityCode });
     }
