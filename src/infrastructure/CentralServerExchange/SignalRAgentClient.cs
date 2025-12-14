@@ -60,6 +60,7 @@ public class SignalRAgentClient
         _connection.On<string>("ReceiveMessage", OnReceiveMessage);
         _connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
         _connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
+        _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
 
         _connection.Reconnecting += error =>
         {
@@ -188,6 +189,13 @@ public class SignalRAgentClient
         {
             _logger.LogError(ex, "Ошибка при отправке данных агента");
         }
+    }
+    
+    private async Task OnFrontolSettings(FrontolSettingsResponse message)
+    {
+        _logger.LogInformation("Получен пакет с настройками фронтола от сервера: {message}", message);
+
+        await _frontolSettingsService.ApplySettings(message.Settings);
     }
     
     public async Task StopAsync()

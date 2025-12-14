@@ -2,6 +2,7 @@
 using Domain.Configuration.Options;
 using Domain.Frontol.Interfaces;
 using FrontolDatabase.Repositories;
+using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.DI.Attributes;
@@ -12,6 +13,8 @@ namespace FrontolDatabase
     {
         public static IServiceCollection AddFrontolDatabase(this IServiceCollection services, DatabaseConnection dbConfig)
         {
+            services.AddScoped<UserProfileDefaultSecurityService>();
+            
             services = ConfigureMainDb(services, dbConfig);
             services = ConfigureLogDb(services, dbConfig);
 
@@ -61,8 +64,7 @@ namespace FrontolDatabase
             services.AddDbContext<LogDbCtx>(options =>
                 options.UseFirebird(connectionString));
             
-            services.AddScoped<IFrontolLog, LogRepository>();
-            
+            services.AddScoped<IFrontolLog, LogRepository>();            
             return services;
         }
         

@@ -6,6 +6,7 @@ using Domain.Frontol.Metadata;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Mapping;
 using FrontolDatabase.Parsers;
+using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -15,11 +16,13 @@ public class MainDbRepository : IFrontolMainDb
 {
     private readonly ILogger<MainDbCtx> _logger;
     private readonly MainDbCtx _ctx;
+    private readonly UserProfileDefaultSecurityService _userProfileDefaultSecurityService;
 
-    public MainDbRepository(ILogger<MainDbCtx> logger, MainDbCtx ctx)
+    public MainDbRepository(ILogger<MainDbCtx> logger, MainDbCtx ctx, UserProfileDefaultSecurityService userProfileDefaultSecurityService)
     {
         _logger = logger;
         _ctx = ctx;
+        _userProfileDefaultSecurityService = userProfileDefaultSecurityService;
     }
     
     private async Task<int> NextChangeId()
@@ -113,8 +116,6 @@ public class MainDbRepository : IFrontolMainDb
 
         await _ctx.SaveChangesAsync();
         
-        await Restart();
-
         return Result.Success();
     }
 
@@ -187,77 +188,106 @@ public class MainDbRepository : IFrontolMainDb
     {
         if (_ctx.UserProfiles == null)
             return Result.Failure("Не удалось открыть UserProfiles");
-        
+
         if (_ctx.UserProfileSecurity == null)
             return Result.Failure("Не удалось открыть UserProfileSecurity");
 
-        foreach (var userProfile in userProfiles)
+        try
         {
-            var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == userProfile.Code);
+            var defaultSecurityCodes = await _userProfileDefaultSecurityService.GetAllSecurityCodesAsync();
+            if (defaultSecurityCodes.Count == 0)
+                _logger.LogWarning("Не удалось загрузить коды Securities из JSON файла");
 
-            if (existProfile is null)
+            foreach (var userProfile in userProfiles)
             {
-                Profile profile = new()
+                var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == userProfile.Code);
+
+                if (existProfile is null)
                 {
-                    Code = userProfile.Code,
-                    Name = userProfile.Name,
-                    DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile,
-                    ForSelfieUser = userProfile.ForSelfieMode,
-                    SkipSupervisorMode = userProfile.SkipSupervisorMode,
-                };
-                
-                await _ctx.UserProfiles.AddAsync(profile);
-            }
-            else
-            {
-                existProfile.Name = userProfile.Name;
-                existProfile.DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile;
-                existProfile.ForSelfieUser = userProfile.ForSelfieMode;
-                existProfile.SkipSupervisorMode = userProfile.SkipSupervisorMode;
-                
-                _ctx.UserProfiles.Update(existProfile);
-            }
-            
-            await _ctx.SaveChangesAsync();
-            
-            var profileId = _ctx.UserProfiles.FirstOrDefault(p => p.Code == userProfile.Code)?.Id;
-            
-            if (profileId == null)
-                continue;
-            
-            var existSecurities = await _ctx.UserProfileSecurity.Where(p => p.ProfileId == profileId).AsNoTracking().ToListAsync();
-
-            foreach (var existSecurity in existSecurities)
-            {
-                var security = userProfile.Securities.Find(p => p.Id == existSecurity.SecurityCode);
-
-                if (security is null)
-                {
-                    var newSecurity = new Security()
+                    Profile profile = new()
                     {
-                        ProfileId = profileId ?? 0,
-                        SecurityCode = existSecurity.SecurityCode,
-                        Value = existSecurity.Value
+                        Code = userProfile.Code,
+                        Name = userProfile.Name,
+                        DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile,
+                        ForSelfieUser = userProfile.ForSelfieMode,
+                        SkipSupervisorMode = userProfile.SkipSupervisorMode,
                     };
-                    
-                    _ctx.UserProfileSecurity.Add(newSecurity);
+
+                    await _ctx.UserProfiles.AddAsync(profile);
+                    await _ctx.SaveChangesAsync();
+
+                    var profileId = profile.Id;
+
+                    foreach (var securityCode in defaultSecurityCodes)
+                    {
+                        var securityValue = userProfile.Securities.Any(s => s.Id == securityCode) ? 1 : 0;
+
+                        var newSecurity = new Security()
+                        {
+                            ProfileId = profileId,
+                            SecurityCode = securityCode,
+                            Value = securityValue
+                        };
+
+                        await _ctx.UserProfileSecurity.AddAsync(newSecurity);
+                    }
                 }
                 else
                 {
-                    if (security.Value == existSecurity.Value)
-                        continue;
-                    
-                    existSecurity.Value =security.Value;
-                    
-                    _ctx.UserProfileSecurity.Update(existSecurity);
+                    existProfile.Name = userProfile.Name;
+                    existProfile.DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile;
+                    existProfile.ForSelfieUser = userProfile.ForSelfieMode;
+                    existProfile.SkipSupervisorMode = userProfile.SkipSupervisorMode;
+
+                    var profileId = existProfile.Id;
+
+                    var existSecurities = await _ctx.UserProfileSecurity
+                        .Where(p => p.ProfileId == profileId)
+                        .ToListAsync();
+
+                    var userProfileSecuritiesDict = userProfile.Securities.ToDictionary(s => s.Id, s => s.Value);
+
+                    foreach (var existSecurity in existSecurities)
+                    {
+                        if (userProfileSecuritiesDict.TryGetValue(existSecurity.SecurityCode, out var newValue))
+                        {
+                            if (existSecurity.Value != newValue)
+                                existSecurity.Value = newValue;
+                        }
+                        else
+                        {
+                            if (existSecurity.Value != 0)
+                                existSecurity.Value = 0;
+                        }
+                    }
+
+                    var existingCodes = existSecurities.Select(s => s.SecurityCode).ToHashSet();
+                    foreach (var security in userProfile.Securities)
+                    {
+                        if (existingCodes.Contains(security.Id))
+                            continue;
+
+                        var newSecurity = new Security()
+                        {
+                            ProfileId = profileId,
+                            SecurityCode = security.Id,
+                            Value = security.Value
+                        };
+
+                        await _ctx.UserProfileSecurity.AddAsync(newSecurity);
+                    }
                 }
+
+                await _ctx.SaveChangesAsync();
             }
-            
-            await _ctx.SaveChangesAsync();
+
+            return Result.Success();
         }
-        
-        await Restart();
-        
-        return Result.Success();
+        catch (Exception ex)
+        {
+            var err = $"Ошибка загрузки профилей пользователей: {ex.Message}";
+            _logger.LogError(ex, err);
+            return Result.Failure(err);
+        }
     }
 }

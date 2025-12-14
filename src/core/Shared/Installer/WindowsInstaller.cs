@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.ServiceProcess;
 using Shared.FilesFolders;
 using Shared.Installer.Interface;
@@ -9,6 +10,7 @@ using static System.ServiceProcess.ServiceController;
 
 namespace Shared.Installer;
 
+[SupportedOSPlatform("windows")]
 public class WindowsInstaller : IInstaller
 {
     private readonly string _appName;

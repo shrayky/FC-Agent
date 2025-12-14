@@ -39,4 +39,14 @@ public class FrontolSettingsService
         
         return Result.Success(packet);
     }
+
+    public async Task<Result> ApplySettings(FrontolSettings settings)
+    {
+        using var scope = _serviceScope.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+
+        return await repository.LoadGlobalControlConfig(settings.GlobalControl)
+            .Tap(async () => await repository.LoadUserProfiles(settings.UserProfiles))
+            .Tap(async () => await repository.Restart());
+    }
 }
