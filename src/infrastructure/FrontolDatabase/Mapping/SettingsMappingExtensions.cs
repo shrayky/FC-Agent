@@ -20,14 +20,6 @@ public static class SettingsMappingExtensions
 
             var parsed = valueParser(raw, meta.Property.PropertyType);
 
-            // атол немного "накосячил" с типом одной настройки:
-            // вроде тип тоавр+нет, а значение как для товар+да+нет
-            // пробуем костылить
-            if (meta.Name == "controlAlco")
-            {
-                parsed = (string)parsed! == "0" ? "0" : "2";
-            }
-            
             if (parsed is not null)
                 meta.Property.SetValue(result, parsed);
         }
@@ -51,7 +43,17 @@ public static class SettingsMappingExtensions
             if (val is null)
                 continue;
 
-            setting.Value = valueFormatter(val);
+            var value = valueFormatter(val);
+
+            // атол немного "накосячил" с типом одной настройки:
+            // вроде тип тоавр+нет, а значение как для товар+да+нет
+            // пробуем костылить
+            if (meta.Name == "ControlAlco")
+            {
+                value = value == "0" ? "0" : "2";
+            }
+
+            setting.Value = value;
         }
     }
 }
