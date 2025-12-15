@@ -401,3 +401,6 @@ FodyWeavers.xsd
 **/rider.project.model.nuget.info
 **/*.assets.cache
 **/*.DotSettings.user
+
+# vscode ide files
+.vscode/launch.json
