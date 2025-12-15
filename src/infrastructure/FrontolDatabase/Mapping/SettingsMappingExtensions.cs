@@ -19,6 +19,15 @@ public static class SettingsMappingExtensions
                 continue;
 
             var parsed = valueParser(raw, meta.Property.PropertyType);
+
+            // атол немного "накосячил" с типом одной настройки:
+            // вроде тип тоавр+нет, а значение как для товар+да+нет
+            // пробуем костылить
+            if (meta.Name == "controlAlco")
+            {
+                parsed = (string)parsed! == "0" ? "0" : "2";
+            }
+            
             if (parsed is not null)
                 meta.Property.SetValue(result, parsed);
         }
