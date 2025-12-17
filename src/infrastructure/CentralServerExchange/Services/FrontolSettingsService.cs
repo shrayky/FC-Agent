@@ -21,9 +21,10 @@ public class FrontolSettingsService
     {
         using var scope = _serviceScope.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+        var userProfilesRepository = scope.ServiceProvider.GetRequiredService<IFrontolUserProfiles>();
 
         var globalConfig = await repository.GetGlobalControlConfig();
-        var userProfiles = await repository.GetUserProfiles();
+        var userProfiles = await userProfilesRepository.GetUserProfiles();
         
         if (globalConfig.IsFailure)
             return Result.Failure<FrontolSettings>(globalConfig.Error);
@@ -43,10 +44,11 @@ public class FrontolSettingsService
     public async Task<Result> ApplySettings(FrontolSettings settings)
     {
         using var scope = _serviceScope.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+        var mainRepository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+        var userRepository = scope.ServiceProvider.GetRequiredService<IFrontolUserProfiles>();
 
-        return await repository.LoadGlobalControlConfig(settings.GlobalControl)
-            .Tap(async () => await repository.LoadUserProfiles(settings.UserProfiles))
-            .Tap(async () => await repository.Restart());
+        return await mainRepository.LoadGlobalControlConfig(settings.GlobalControl)
+            .Tap(async () => await userRepository.LoadUserProfiles(settings.UserProfiles))
+            .Tap(async () => await mainRepository.Restart());
     }
 }

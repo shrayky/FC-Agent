@@ -1,25 +1,26 @@
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
-using FrontolDatabase;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
+namespace FrontolDatabase.Repositories;
 
 public class UserProfilesRepository : IFrontolUserProfiles
 {
     private readonly ILogger<UserProfilesRepository> _logger;
     private readonly MainDbCtx _ctx;
     private readonly UserProfileDefaultSecurityService _defaultSecurityService;
-    private readonly IFrontolMainDb _maindDb;
+    private readonly IFrontolMainDb _mainDb;
 
-    public UserProfilesRepository(ILogger<UserProfilesRepository> logger, MainDbCtx ctx, UserProfileDefaultSecurityService defaultSecurityService, IFrontolMainDb maindDb)
+    public UserProfilesRepository(ILogger<UserProfilesRepository> logger, MainDbCtx ctx, UserProfileDefaultSecurityService defaultSecurityService, IFrontolMainDb mainDb)
     {
         _logger = logger;
         _ctx = ctx;
         _defaultSecurityService = defaultSecurityService;
-        _maindDb = maindDb;
+        _mainDb = mainDb;
     }
 
     public async Task<Result<List<UserProfile>>> GetUserProfiles()
@@ -78,123 +79,131 @@ public class UserProfilesRepository : IFrontolUserProfiles
         {
             var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == profile.Code);
 
-            if (existProfile == null)
-            {
-                
-            }
+            Result<int> createUpdateResult;
 
+            if (existProfile == null)
+                createUpdateResult = await CreateNewProfile(profile, defaultSecurityCodes);
+            else
+                createUpdateResult = await UpdateProfile(existProfile, profile);
+
+            if (createUpdateResult.IsFailure)
+            {
+                _logger.LogWarning("Ошибка записи профиля {code} в базу данных фронтол: {err}",  profile.Code, createUpdateResult.Error);
+            }
         }
+
+        return Result.Success();
+
+    }
+
+    private async Task<Result<int>> CreateNewProfile(UserProfile profile, HashSet<int> securityCodes)
+    {
+        if (_ctx.UserProfiles == null)
+            return Result.Failure<int>("База данных UserProfiles недоступна");
         
+        if (_ctx.UserProfileSecurity == null)
+            return Result.Failure<int>("База данных UserProfileSecurity недоступна");
+        
+        var userProfile = new Profile
+        {
+            Id = await _mainDb.NextChangeId(),
+            Code = profile.Code,
+            Name = profile.Name,
+            DontChangeUsersOnExchange = profile.DontLoadUserWithThisProfile,
+            ForSelfieUser = profile.ForSelfieMode,
+            SkipSupervisorMode = profile.SkipSupervisorMode,
+        };
 
         try
         {
-            foreach (var userProfile in userProfiles)
-            {
-                var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == userProfile.Code);
-
-                if (existProfile is null)
-                {
-                    Profile profile = new()
-                    {
-                        Id = await _maindDb.NextChangeId(),
-                        Code = userProfile.Code,
-                        Name = userProfile.Name,
-                        DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile,
-                        ForSelfieUser = userProfile.ForSelfieMode,
-                        SkipSupervisorMode = userProfile.SkipSupervisorMode,
-                    };
-
-                    await _ctx.UserProfiles.AddAsync(profile);
-                    await _ctx.SaveChangesAsync();
-
-                    var profileId = profile.Id;
-
-                    var securitiesToAdd = new List<Security>();
-                    
-                    foreach (var securityCode in defaultSecurityCodes)
-                    {
-                        var securityValue = userProfile.Securities.Any(s => s.Id == securityCode) ? 1 : 0;
-
-                        var newSecurity = new Security()
-                        {
-                            ProfileId = profileId,
-                            SecurityCode = securityCode,
-                            Value = securityValue
-                        };
-
-                        securitiesToAdd.Add(newSecurity);
-                    }
-                    
-                    await _ctx.UserProfileSecurity.AddRangeAsync(securitiesToAdd);
-                }
-                else
-                {
-                    existProfile.Name = userProfile.Name;
-                    existProfile.DontChangeUsersOnExchange = userProfile.DontLoadUserWithThisProfile;
-                    existProfile.ForSelfieUser = userProfile.ForSelfieMode;
-                    existProfile.SkipSupervisorMode = userProfile.SkipSupervisorMode;
-
-                    var profileId = existProfile.Id;
-
-                    var existSecurities = await _ctx.UserProfileSecurity
-                        .Where(p => p.ProfileId == profileId)
-                        .AsNoTracking()
-                        .ToListAsync();
-
-                    var userProfileSecuritiesDict = userProfile.Securities.ToDictionary(s => s.Id, s => s.Value);
-
-                    var securitiesToAdd = new List<Security>();
-                    
-                    foreach (var securityCode in defaultSecurityCodes)
-                    {
-                        var existSecurity = existSecurities.FirstOrDefault(s => s.SecurityCode == securityCode);
-    
-                        if (existSecurity != null)
-                        {
-                            var trackedSecurity = await _ctx.UserProfileSecurity
-                                .FirstOrDefaultAsync(s => s.ProfileId == profileId && s.SecurityCode == securityCode);
-        
-                            if (trackedSecurity != null)
-                                trackedSecurity.Value = userProfileSecuritiesDict.TryGetValue(securityCode, out var value) ? value : 0;
-                        }
-                        else
-                        {
-                            var newValue = userProfileSecuritiesDict.TryGetValue(securityCode, out var value) ? value : 0;
-                            securitiesToAdd.Add(new Security()
-                            {
-                                SecurityCode = securityCode,
-                                Value = newValue
-                            });
-                        }
-                    }
-
-                    var existingCodes = existSecurities.Select(s => s.SecurityCode).ToHashSet();
-                    foreach (var security in userProfile.Securities)
-                    {
-                        if (existingCodes.Contains(security.Id))
-                            continue;
-
-                        var newSecurity = new Security()
-                        {
-                            ProfileId = profileId,
-                            SecurityCode = security.Id,
-                            Value = security.Value
-                        };
-
-                        await _ctx.UserProfileSecurity.AddAsync(newSecurity);
-                    }
-                }
-
-                await _ctx.SaveChangesAsync();
-            }
-
-            return Result.Success();
+            await _ctx.UserProfiles.AddAsync(userProfile);
         }
         catch (Exception ex)
         {
-            var err = $"Ошибка загрузки профилей пользователей: {ex.Message}";
-            _logger.LogError(ex, err);
-            return Result.Failure(err);
+            return Result.Failure<int>(ex.Message);
         }
+        
+        var defaultSecurities= await _defaultSecurityService.CreateDefaultSecuritiesAsync(userProfile.Id, securityCodes);
+
+        try
+        {
+            await _ctx.UserProfileSecurity.AddRangeAsync(defaultSecurities);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<int>(ex.Message);
+        }
+
+        return Result.Success(userProfile.Id);
     }
+    
+    private async Task<Result<int>> UpdateProfile(Profile existProfile, UserProfile profile)
+    {
+        if (_ctx.UserProfiles == null)
+            return Result.Failure<int>("База данных UserProfiles недоступна");
+        
+        if (_ctx.UserProfileSecurity == null)
+            return Result.Failure<int>("База данных UserProfileSecurity недоступна");
+        
+        existProfile.Name = profile.Name;
+        existProfile.DontChangeUsersOnExchange = profile.DontLoadUserWithThisProfile;
+        existProfile.ForSelfieUser = profile.ForSelfieMode;
+        existProfile.SkipSupervisorMode = profile.SkipSupervisorMode;
+        try
+        {
+            _ctx.UserProfiles.Update(existProfile);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<int>(ex.Message);
+        }
+
+        var existSecurities = await _ctx.UserProfileSecurity
+            .Where(f => f.ProfileId == existProfile.Id)
+            .ToListAsync();
+        
+        var existingSecurityCodes = existSecurities.Select(s => s.SecurityCode).ToHashSet();
+        
+        var newSecurities = profile.Securities
+            .Where(ps => !existingSecurityCodes.Contains(ps.Id))
+            .Select(ps => new Security
+            {
+                ProfileId = existProfile.Id,
+                SecurityCode = ps.Id,
+                Value = ps.Value
+            })
+            .ToList();
+        
+        var securitiesToUpdate = (profile.Securities
+                .Join(existSecurities, profileSec => profileSec.Id, existSec => existSec.SecurityCode,
+                    (profileSec, existSec) => new { profileSec, existSec })
+                .Where(@t => @t.profileSec.Value != @t.existSec.Value)
+                .Select(@t => @t.existSec))
+            .ToList();
+        
+        foreach (var secToUpdate in securitiesToUpdate)
+        {
+            var newValue = profile.Securities.First(ps => ps.Id == secToUpdate.SecurityCode);
+            secToUpdate.Value = newValue.Value;
+            
+            _ctx.UserProfileSecurity.Update(secToUpdate);
+        }
+        
+        if (newSecurities.Count > 0)
+        {
+            await _ctx.UserProfileSecurity.AddRangeAsync(newSecurities);
+        }
+        
+        try
+        {
+            await _ctx.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<int>(ex.Message);
+        }
+        
+        return Result.Success(existProfile.Id);
+    }
+    
 }
