@@ -164,15 +164,23 @@ public class UserProfilesRepository : IFrontolUserProfiles
         
         var existingSecurityCodes = existSecurities.Select(s => s.SecurityCode).ToHashSet();
         
-        var newSecurities = profile.Securities
+        var newSecuritiesToAdd = profile.Securities
             .Where(ps => !existingSecurityCodes.Contains(ps.Id))
-            .Select(ps => new Security
+            .ToList();
+
+        var newSecurities = new List<Security>();
+        
+        foreach (var ps in newSecuritiesToAdd)
+        {
+            var security = new Security
             {
+                Id = await _mainDb.NextChangeId(),
                 ProfileId = existProfile.Id,
                 SecurityCode = ps.Id,
                 Value = ps.Value
-            })
-            .ToList();
+            };
+            newSecurities.Add(security);
+        }
         
         var securitiesToUpdate = (profile.Securities
                 .Join(existSecurities, profileSec => profileSec.Id, existSec => existSec.SecurityCode,

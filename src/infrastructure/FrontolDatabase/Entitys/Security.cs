@@ -7,6 +7,9 @@ namespace FrontolDatabase.Entitys;
 public class Security
 {
     [Key]
+    [Column("ID")]
+    public  int Id { get; set; }
+    
     [Column("PROFILEID")]
     public int ProfileId { get; set; }
     
