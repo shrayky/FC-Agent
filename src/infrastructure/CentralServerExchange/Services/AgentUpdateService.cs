@@ -56,6 +56,14 @@ public class AgentUpdateService
 
     private async Task<Result<Stream>> DownloadSoftware(string requestAddress)
     {
+        var directoryPath = Path.Combine(Path.GetTempPath(), ApplicationInformation.Name);
+
+        if (Directory.Exists(directoryPath))
+        {
+            Directory.Delete(directoryPath, true);
+            Directory.CreateDirectory(directoryPath);
+        }
+
         var result = await _httpClient.DownloadFileWithResumeAsync(
             requestAddress,
             Path.Combine(Path.GetTempPath(), ApplicationInformation.Name, "update.zip"),
