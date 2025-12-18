@@ -47,6 +47,11 @@ public class WindowsInstaller : IInstaller
         var wwwrootPath = Path.Combine(installDirectory, "wwwroot");
 
         StopService();
+
+        while (IsProcessRunning(exeName))
+        {
+            WaitForProcessToExit(exeName);            
+        }
         
         if (File.Exists(binPath))
             File.Delete(binPath);
@@ -214,5 +219,28 @@ public class WindowsInstaller : IInstaller
         existingService.WaitForStatus(ServiceControllerStatus.Running);
         
         WriteLine($"Служба {_appName}, запущена", _appName);
+    }
+    
+    private bool IsProcessRunning(string processName)
+    {
+        var processes = Process.GetProcessesByName(processName.Replace(".exe", ""));
+        return processes.Length > 0;
+    }
+    
+    private void WaitForProcessToExit(string processName, int maxWaitSeconds = 5)
+    {
+        var startTime = DateTime.Now;
+        var maxWaitTime = TimeSpan.FromSeconds(maxWaitSeconds);
+    
+        while (IsProcessRunning(processName))
+        {
+            if (DateTime.Now - startTime > maxWaitTime)
+            {
+                WriteLine($"Процесс {processName} не завершился за {maxWaitSeconds} секунд");
+                break;
+            }
+        
+            Thread.Sleep(100);
+        }
     }
 }
