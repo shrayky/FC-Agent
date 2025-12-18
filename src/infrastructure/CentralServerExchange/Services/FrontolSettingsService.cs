@@ -20,7 +20,7 @@ public class FrontolSettingsService
     public async Task<Result<FrontolSettings>> ReadFrontolSettings()
     {
         using var scope = _serviceScope.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+        var repository = scope.ServiceProvider.GetRequiredService<IFrontolSettings>();
         var userProfilesRepository = scope.ServiceProvider.GetRequiredService<IFrontolUserProfiles>();
 
         var globalConfig = await repository.GetGlobalControlConfig();
@@ -45,9 +45,10 @@ public class FrontolSettingsService
     {
         using var scope = _serviceScope.CreateScope();
         var mainRepository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
+        var settingsRepository = scope.ServiceProvider.GetRequiredService<IFrontolSettings>();
         var userRepository = scope.ServiceProvider.GetRequiredService<IFrontolUserProfiles>();
 
-        return await mainRepository.LoadGlobalControlConfig(settings.GlobalControl)
+        return await settingsRepository.LoadGlobalControlConfig(settings.GlobalControl)
             .Tap(async () => await userRepository.LoadUserProfiles(settings.UserProfiles))
             .Tap(async () => await mainRepository.Restart());
     }

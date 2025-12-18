@@ -48,10 +48,7 @@ public class WindowsInstaller : IInstaller
 
         StopService();
 
-        while (IsProcessRunning(exeName))
-        {
-            WaitForProcessToExit(exeName);            
-        }
+        Thread.Sleep(TimeSpan.FromMinutes(1));            
         
         if (File.Exists(binPath))
             File.Delete(binPath);
@@ -133,12 +130,6 @@ public class WindowsInstaller : IInstaller
         ServiceController? existingService;
         existingService = GetServices().FirstOrDefault(ser => ser.ServiceName == _appName);
 
-        if (existingService != null)
-        {
-            WriteLine($"Служба {_appName} уже существует");
-            return;
-        }
-
         Process process = new();
         ProcessStartInfo startInfo = new()
         {
@@ -148,12 +139,20 @@ public class WindowsInstaller : IInstaller
         process.StartInfo = startInfo;
         startInfo.FileName = "cmd.exe";
 
-        WriteLine($"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto");
-        startInfo.Arguments = $"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto";
-        process.Start();
-
-        startInfo.Arguments = $"/c sc failure \"{_appName}\" reset= 5 actions= restart/5000";
-        process.Start();
+        
+        if (existingService == null)
+        {
+            WriteLine($"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto");
+            startInfo.Arguments = $"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto";
+            process.Start();
+            
+            startInfo.Arguments = $"/c sc failure \"{_appName}\" reset= 5 actions= restart/5000";
+            process.Start();
+        }
+        else
+        {
+            WriteLine($"Служба {_appName} уже существует");
+        }
 
         startInfo.Arguments = $"/c netsh advfirewall firewall delete rule name = \"{_serviceName}\"";
         process.Start();
@@ -164,6 +163,17 @@ public class WindowsInstaller : IInstaller
                 $"/c netsh advfirewall firewall add rule name = \"{_serviceName}\" dir =in action = allow protocol = TCP localport = {_serviceIpPort}";
             process.Start();
         }
+
+        const string taskName = "fc-guard";
+        
+        startInfo.Arguments = $"/c schtasks /Delete /TN \"{taskName}\" /F 2>nul";
+        process.Start();
+        
+        var cmdCommand = $"sc query {_appName} | find \"RUNNING\" >nul || sc start {_appName}";
+        var escapedCommand = cmdCommand.Replace("\"", "\\\"");
+        
+        startInfo.Arguments = $"/c schtasks /Create /TN \"{taskName}\" /TR \"cmd.exe /c {escapedCommand}\" /SC MINUTE /MO 5 /F /RL HIGHEST";
+        process.Start();
 
         startInfo.Arguments = $"/c net start {_appName}";
         process.Start();

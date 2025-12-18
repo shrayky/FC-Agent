@@ -42,6 +42,7 @@ namespace FrontolDatabase
                 options.UseFirebird(connectionString));
             
             services.AddScoped<IFrontolMainDb, MainDbRepository>();
+            services.AddScoped<IFrontolSettings, SettingsRepository>();
             services.AddScoped<IFrontolUserProfiles, UserProfilesRepository>();
             
             return services;
