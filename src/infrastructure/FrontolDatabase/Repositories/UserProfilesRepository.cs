@@ -79,16 +79,24 @@ public class UserProfilesRepository : IFrontolUserProfiles
         {
             var existProfile = await _ctx.UserProfiles.FirstOrDefaultAsync(p => p.Code == profile.Code);
 
-            Result<int> createUpdateResult;
-
             if (existProfile == null)
-                createUpdateResult = await CreateNewProfile(profile, defaultSecurityCodes);
-            else
-                createUpdateResult = await UpdateProfile(existProfile, profile);
-
-            if (createUpdateResult.IsFailure)
             {
-                _logger.LogWarning("Ошибка записи профиля {code} в базу данных фронтол: {err}",  profile.Code, createUpdateResult.Error);
+                var newProfileCreateResult = await CreateNewProfile(profile, defaultSecurityCodes);
+
+                if (newProfileCreateResult.IsFailure)
+                {
+                    _logger.LogWarning("Ошибка создания профиля {code} в базу данных фронтол: {err}", profile.Code, newProfileCreateResult.Error);
+                    continue;
+                }
+
+                existProfile = newProfileCreateResult.Value;
+            }
+            
+            var profileUpdateResult = await UpdateProfile(existProfile, profile);
+
+            if (profileUpdateResult.IsFailure)
+            {
+                _logger.LogWarning("Ошибка записи профиля {code} в базу данных фронтол: {err}",  profile.Code, profileUpdateResult.Error);
             }
         }
 
@@ -96,13 +104,13 @@ public class UserProfilesRepository : IFrontolUserProfiles
 
     }
 
-    private async Task<Result<int>> CreateNewProfile(UserProfile profile, HashSet<int> securityCodes)
+    private async Task<Result<Profile>> CreateNewProfile(UserProfile profile, HashSet<int> securityCodes)
     {
         if (_ctx.UserProfiles == null)
-            return Result.Failure<int>("База данных UserProfiles недоступна");
+            return Result.Failure<Profile>("База данных UserProfiles недоступна");
         
         if (_ctx.UserProfileSecurity == null)
-            return Result.Failure<int>("База данных UserProfileSecurity недоступна");
+            return Result.Failure<Profile>("База данных UserProfileSecurity недоступна");
         
         var userProfile = new Profile
         {
@@ -120,21 +128,45 @@ public class UserProfilesRepository : IFrontolUserProfiles
         }
         catch (Exception ex)
         {
-            return Result.Failure<int>(ex.Message);
+            return Result.Failure<Profile>(ex.Message);
         }
         
         var defaultSecurities= await _defaultSecurityService.CreateDefaultSecuritiesAsync(userProfile.Id, securityCodes);
 
+        List<Security> profileSecurites = [];
+
+        foreach (var security in defaultSecurities)
+        {
+            Security row = new()
+            {
+                Id = await _mainDb.NextChangeId(),
+                ProfileId = userProfile.Id,
+                SecurityCode = security.SecurityCode,
+                Value = security.Value
+            };
+
+            profileSecurites.Add(row);
+        }
+
         try
         {
-            await _ctx.UserProfileSecurity.AddRangeAsync(defaultSecurities);
+            await _ctx.UserProfileSecurity.AddRangeAsync(profileSecurites);
         }
         catch (Exception ex)
         {
-            return Result.Failure<int>(ex.Message);
+            return Result.Failure<Profile>(ex.Message);
         }
 
-        return Result.Success(userProfile.Id);
+        try
+        {
+            await _ctx.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<Profile>(ex.Message);
+        }
+
+        return Result.Success(userProfile);
     }
     
     private async Task<Result<int>> UpdateProfile(Profile existProfile, UserProfile profile)

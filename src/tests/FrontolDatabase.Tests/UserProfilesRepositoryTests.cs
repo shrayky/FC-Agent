@@ -151,10 +151,12 @@ public class UserProfilesRepositoryTests
         // Act
         var result = _repository.SecuritiesToUpdate(profileSecurities, existSecurities);
         
-        // Assert: метод не должен возвращать записи, которых нет в новом профиле
+        // Assert: метод должен возвращать записи, которых нет в новом профиле со значением 0
         // (Join делает внутреннее соединение, поэтому SecurityCode=2 не попадет в результат)
-        Assert.That(result, Has.Count.EqualTo(1)); // только SecurityCode=1, который есть в обоих списках
+        Assert.That(result, Has.Count.EqualTo(2)); // только SecurityCode=1, который есть в обоих списках
         Assert.That(result[0].SecurityCode, Is.EqualTo(1));
+        Assert.That(result[1].SecurityCode, Is.EqualTo(2));
+        Assert.That(result[1].Value, Is.EqualTo(0));
     }
 
     [Test]
