@@ -23,5 +23,12 @@
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="9.0.11" />
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.6.0" />
+    <PackageVersion Include="Moq" Version="4.20.70" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageVersion Include="NUnit" Version="3.14.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="3.9.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
   </ItemGroup>
 </Project>

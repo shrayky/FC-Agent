@@ -181,14 +181,9 @@ public class UserProfilesRepository : IFrontolUserProfiles
             };
             newSecurities.Add(security);
         }
-        
-        var securitiesToUpdate = (profile.Securities
-                .Join(existSecurities, profileSec => profileSec.Id, existSec => existSec.SecurityCode,
-                    (profileSec, existSec) => new { profileSec, existSec })
-                .Where(@t => @t.profileSec.Value != @t.existSec.Value)
-                .Select(@t => @t.existSec))
-            .ToList();
-        
+
+        var securitiesToUpdate = SecuritiesToUpdate(profile.Securities, existSecurities); 
+                    
         foreach (var secToUpdate in securitiesToUpdate)
         {
             var newValue = profile.Securities.First(ps => ps.Id == secToUpdate.SecurityCode);
@@ -212,6 +207,16 @@ public class UserProfilesRepository : IFrontolUserProfiles
         }
         
         return Result.Success(existProfile.Id);
+    }
+    
+    internal List<Security> SecuritiesToUpdate(List<UserProfileSecurity> profileSecurities, List<Security> existSecurities)
+    {
+        return profileSecurities
+            .Join(existSecurities, profileSec => profileSec.Id, existSec => existSec.SecurityCode,
+                (profileSec, existSec) => new { profileSec, existSec })
+            .Where(t => t.profileSec.Value != t.existSec.Value)
+            .Select(t => t.existSec)
+            .ToList();
     }
     
 }
