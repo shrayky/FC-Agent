@@ -218,8 +218,9 @@ public class UserProfilesRepository : IFrontolUserProfiles
                     
         foreach (var secToUpdate in securitiesToUpdate)
         {
-            var newValue = profile.Securities.First(ps => ps.Id == secToUpdate.SecurityCode);
-            secToUpdate.Value = newValue.Value;
+            var newValue = profile.Securities.FirstOrDefault(ps => ps.Id == secToUpdate.SecurityCode);
+
+            secToUpdate.Value = newValue?.Value ?? 2;
             
             _ctx.UserProfileSecurity.Update(secToUpdate);
         }
@@ -243,12 +244,20 @@ public class UserProfilesRepository : IFrontolUserProfiles
     
     internal List<Security> SecuritiesToUpdate(List<UserProfileSecurity> profileSecurities, List<Security> existSecurities)
     {
-        return profileSecurities
+        var profileSecurityIds = profileSecurities.Select(ps => ps.Id).ToHashSet();
+    
+        // Записи, которые есть в обоих списках и отличаются по значению
+        var changed = profileSecurities
             .Join(existSecurities, profileSec => profileSec.Id, existSec => existSec.SecurityCode,
                 (profileSec, existSec) => new { profileSec, existSec })
             .Where(t => t.profileSec.Value != t.existSec.Value)
-            .Select(t => t.existSec)
-            .ToList();
+            .Select(t => t.existSec);
+        
+        // Записи из базы, которых нет в profileSecurities, но у которых Value = 1
+        var toReset = existSecurities
+            .Where(existSec => !profileSecurityIds.Contains(existSec.SecurityCode) && existSec.Value == 1);
+        
+        return changed.Concat(toReset).ToList();
     }
     
 }
