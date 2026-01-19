@@ -21,6 +21,13 @@ namespace ViewApp.Workers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var settings = await _parametersService.Current();
+
+            if (_parametersService.NeedDoMigration(settings))
+            {
+                await _parametersService.Update(settings);
+            }
+
             _logger.LogWarning("Служба запущена");
 
             while (!stoppingToken.IsCancellationRequested)

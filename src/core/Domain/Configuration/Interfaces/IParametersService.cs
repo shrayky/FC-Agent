@@ -6,5 +6,6 @@ namespace Domain.Configuration.Interfaces
     {
         Task<Parameters> Current();
         Task<bool> Update(Parameters parameters);
+        bool NeedDoMigration(Parameters parameters);
     }
 }
