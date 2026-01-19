@@ -64,6 +64,9 @@ namespace ViewApp.Workers
             
             await _parametersService.Update(settings);
 
+            if (!_applicationState.NeedRestart())
+                _applicationState.UpdateNeedRestart(true);
+            
             return true;
         }
     }
