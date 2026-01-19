@@ -26,6 +26,7 @@ namespace ViewApp.Workers
             while (!stoppingToken.IsCancellationRequested)
             {
                 CheckRestartApplication();
+                
                 _ = await FillFrontolPathSettings();
                 
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
@@ -60,6 +61,7 @@ namespace ViewApp.Workers
 
             settings.DatabaseConnection.DatabasePath = dbPathExtraction.Value.mainPath;
             settings.DatabaseConnection.LogDatabasePath = dbPathExtraction.Value.logPath;
+            
             await _parametersService.Update(settings);
 
             return true;

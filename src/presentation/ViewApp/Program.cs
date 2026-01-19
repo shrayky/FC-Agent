@@ -33,7 +33,6 @@ builder.Services.AddCentralServerClient();
 builder.Services.AddFrontolDatabase(appSettings.DatabaseConnection);
 builder.Services.AddHostedService<AfterStartWorker>();
 
-// Добавить Razor Pages вместо Blazor
 builder.Services.AddRazorPages();
 
 builder.Logging.AddConsole();
