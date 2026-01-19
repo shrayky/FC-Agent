@@ -12,10 +12,12 @@ namespace Configuration.Services
     public class ConfigurationMigrationService : IConfigurationMigrationService
     {
         private readonly ILogger<ConfigurationMigrationService> _logger;
+        private readonly IParametersService _parametersService;
 
-        public ConfigurationMigrationService(ILogger<ConfigurationMigrationService> logger)
+        public ConfigurationMigrationService(ILogger<ConfigurationMigrationService> logger, IParametersService parametersService)
         {
             _logger = logger;
+            _parametersService = parametersService;
         }
 
         public async Task<Parameters> MigrateConfiguration(Parameters parameters)
@@ -31,6 +33,8 @@ namespace Configuration.Services
 
             parameters.Information.Version = ApplicationInformation.Version;
             parameters.Information.Assembly = ApplicationInformation.Assembly;
+
+            await _parametersService.Update(parameters);
 
             return parameters;
         }

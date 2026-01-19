@@ -57,14 +57,14 @@ namespace Configuration.Services
                 return false;
             }
 
-            var migratedConfig = await _migrationService.Value.MigrateConfiguration(parameters);
+            parameters = await _migrationService.Value.MigrateConfiguration(parameters);
 
-            await NeedRestart(migratedConfig);
-                        
-            await _fileManager.Value.SaveConfiguration(migratedConfig);
-            await _fileManager.Value.CreateBackup(migratedConfig);
+            await NeedRestart(parameters);
+
+            await _fileManager.Value.SaveConfiguration(parameters);
+            await _fileManager.Value.CreateBackup(parameters);
             
-            _cacheManager.Value.CacheConfiguration(migratedConfig);
+            _cacheManager.Value.CacheConfiguration(parameters);
 
             _logger.LogInformation("Конфигурация обновлена");
             return true;
@@ -72,8 +72,12 @@ namespace Configuration.Services
 
         private async Task<bool> NeedRestart(Parameters newParameters)
         {
-            var currentSettings = await Current();
+            var loadSettingsFromFile = await LoadConfiguration();
 
+            if (loadSettingsFromFile.IsFailure)
+                return false;
+
+            var currentSettings = loadSettingsFromFile.Value;
             var need = false;
 
             need = (false
@@ -100,7 +104,11 @@ namespace Configuration.Services
             if (configResult.IsFailure)
                 return configResult;
 
-            return Result.Success(await _migrationService.Value.MigrateConfiguration(configResult.Value));
+            return Result.Success(configResult.Value);
         }
+
+        public bool NeedDoMigration(Parameters parameters)
+            => _migrationService.Value.IsMigrationRequired(parameters);
+
     }
 }
