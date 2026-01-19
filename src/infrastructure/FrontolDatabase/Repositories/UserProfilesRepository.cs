@@ -74,6 +74,8 @@ public class UserProfilesRepository : IFrontolUserProfiles
         var defaultSecurityCodes = await _defaultSecurityService.GetAllSecurityCodesAsync();
         if (defaultSecurityCodes.Count == 0)
             _logger.LogWarning("Не удалось загрузить коды Securities из JSON файла");
+        
+        var haveError = false;
 
         foreach (var profile in userProfiles)
         {
@@ -86,6 +88,7 @@ public class UserProfilesRepository : IFrontolUserProfiles
                 if (newProfileCreateResult.IsFailure)
                 {
                     _logger.LogWarning("Ошибка создания профиля {code} в базу данных фронтол: {err}", profile.Code, newProfileCreateResult.Error);
+                    haveError = true;
                     continue;
                 }
 
@@ -97,11 +100,43 @@ public class UserProfilesRepository : IFrontolUserProfiles
             if (profileUpdateResult.IsFailure)
             {
                 _logger.LogWarning("Ошибка записи профиля {code} в базу данных фронтол: {err}",  profile.Code, profileUpdateResult.Error);
+                haveError = true;
             }
         }
+        
+        var deleteResult = await DeleteOthersUserProfiles(userProfiles);
 
+        haveError = deleteResult.IsFailure;
+        
+        return haveError ? Result.Failure("При загрузки профилей пользователей были ошибки..."): Result.Success();
+
+    }
+
+    private async Task<Result> DeleteOthersUserProfiles(List<UserProfile> userProfiles)
+    {
+        if (_ctx.UserProfiles == null)
+            return Result.Failure("База данных UserProfiles недоступна");
+
+        var profileCodes = userProfiles.Select(p => p.Code).Distinct().ToHashSet();
+
+        var profilesToDelete = await _ctx.UserProfiles
+            .Where(p => !profileCodes.Contains(p.Code))
+            .ToListAsync();
+
+        try
+        {
+            _ctx.UserProfiles.RemoveRange(profilesToDelete);
+            
+            await _ctx.SaveChangesAsync();
+        
+            _logger.LogInformation("Удалено профилей пользователей: {count}", profilesToDelete.Count);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Ошибка при удалении профилей: {ex.Message}");
+        }
+        
         return Result.Success();
-
     }
 
     private async Task<Result<Profile>> CreateNewProfile(UserProfile profile, HashSet<int> securityCodes)
