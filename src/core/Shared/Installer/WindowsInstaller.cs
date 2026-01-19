@@ -142,8 +142,7 @@ public class WindowsInstaller : IInstaller
         
         if (existingService == null)
         {
-            WriteLine($"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto");
-            startInfo.Arguments = $"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto";
+            startInfo.Arguments = $"/c sc create {_appName} binPath= \"{bin}\" DisplayName= \"{_serviceName}\" type= own start= auto depend= FirebirdServerDefaultInstance";
             process.Start();
             
             startInfo.Arguments = $"/c sc failure \"{_appName}\" reset= 5 actions= restart/5000";
