@@ -22,10 +22,12 @@ namespace Configuration.Services
         {
             if (!IsMigrationRequired(parameters))
                 return parameters;
-
-            _logger.LogInformation("Выполняется миграция конфигурации с версии {CurrentVersion} на {TargetVersion}",
+            
+            _logger.LogInformation("Выполняется миграция конфигурации с версии {CurrentVersion}.{CuurentAssembly} на {TargetVersion}.{TargetAssembly}",
                     parameters.Information.Version,
-                    ApplicationInformation.Version);
+                    parameters.Information.Assembly,
+                    ApplicationInformation.Version,
+                    ApplicationInformation.Assembly);
 
             parameters.Information.Version = ApplicationInformation.Version;
             parameters.Information.Assembly = ApplicationInformation.Assembly;
