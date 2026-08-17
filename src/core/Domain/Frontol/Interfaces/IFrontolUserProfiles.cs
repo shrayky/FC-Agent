@@ -1,5 +1,5 @@
 using CSharpFunctionalExtensions;
-using Domain.Frontol.Dto;
+using Domain.Frontol.Models.Settings;
 
 namespace Domain.Frontol.Interfaces;
 

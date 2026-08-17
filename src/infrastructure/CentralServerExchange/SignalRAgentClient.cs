@@ -4,11 +4,12 @@ using Domain.Agent.Dto;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
-using Domain.Frontol.Dto;
+using Domain.Frontol.Models;
 using Domain.Messages.Dto;
 using Domain.Messages.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace CentralServerExchange;
 
@@ -195,7 +196,10 @@ public class SignalRAgentClient
     {
         _logger.LogInformation("Получен пакет с настройками фронтола от сервера: {message}", message);
 
-        await _frontolSettingsService.ApplySettings(message.Settings);
+        var applyingResult = await _frontolSettingsService.ApplySettings(message.Settings);
+
+        if (applyingResult.IsSuccess)
+            await SendFrontolSettingsApplyingIsSuccess();
     }
     
     public async Task StopAsync()
@@ -325,6 +329,45 @@ public class SignalRAgentClient
             _logger.LogError(ex, "Ошибка при отправке логов");
         }
         
+        return Result.Success();
+    }
+
+    public async Task<Result> SendFrontolSettingsApplyingIsSuccess()
+    {
+        const string methodName = "FrontolSettingsApplying";
+
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            const string err = "Невозможно отправить данные: соединение не установлено";
+            _logger.LogWarning(err);
+            return Result.Failure(err);
+        }
+
+        if (!_isRegistered)
+        {
+            const string err = "Агент не зарегистрирован. Попытка повторной регистрации...";
+            _logger.LogWarning(err);
+            await RegisterAgentAsync();
+
+            return Result.Failure(err);
+        }
+
+        try
+        {
+            FrontolSettingsApplyingState message = new()
+            {
+                AgentToken = _agentId,
+                Success = true
+            };
+
+            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+            _logger.LogDebug("Данные логов отправлены на сервер");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при отправке логов");
+        }
+
         return Result.Success();
     }
 }

@@ -1,8 +1,8 @@
 using CSharpFunctionalExtensions;
-using Domain.Frontol.Dto;
 using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Metadata;
+using Domain.Frontol.Models.Settings;
 using FrontolDatabase.Mapping;
 using FrontolDatabase.Parsers;
 using Microsoft.EntityFrameworkCore;
@@ -72,5 +72,34 @@ public class SettingsRepository: IFrontolSettings
         var control = settings.ApplyFromSettings<GlobalControl>(Parser);
 
         return Result.Success(control);
+    }
+
+    public async Task<Result> SetSetting(string name, string value)
+    {
+
+        if (_ctx.Settings == null)
+            return Result.Failure("Не удалось открыть Settings");
+
+        var setting = await _ctx.Settings.FirstOrDefaultAsync(s => s.Name == name);
+
+        if (setting == null)
+            return Result.Failure($"Не удалось установть настройку {name} - не найдена в БД");
+
+        setting.Value = value;
+
+        return Result.Success();
+    }
+
+    public async Task<Result<string>> GetSetting(string name)
+    {
+        if (_ctx.Settings == null)
+            return Result.Failure<string>("Не удалось открыть Settings");
+
+        var setting = await _ctx.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Name == name);
+
+        if (setting == null)
+            return Result.Failure<string>($"Не удалось установть настройку {name} - не найдена в БД");
+
+        return Result.Success(setting.Value);
     }
 }

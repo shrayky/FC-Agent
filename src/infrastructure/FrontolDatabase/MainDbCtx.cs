@@ -10,6 +10,7 @@ public class MainDbCtx : DbContext
     public DbSet<Settings>? Settings { get; set; }
     public DbSet<Profile>? UserProfiles { get; set; }
     public DbSet<Security>? UserProfileSecurity { get; set; }
+    public DbSet<ActScript>? ActionScripts {  get; set; }
     
     private readonly string _connectionString = string.Empty;   
     
@@ -41,9 +42,11 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<CustomDb>()
             .HasKey(k => new { k.Code });
         
+
         modelBuilder.Entity<Settings>()
             .HasKey(k => new { k.Id });
         
+
         modelBuilder.Entity<Profile>()
             .HasKey(k => new { k.Id });
         
@@ -59,7 +62,13 @@ public class MainDbCtx : DbContext
             .Property(p => p.ForSelfieUser)
             .HasConversion(boolToIntConverter);
         
+
         modelBuilder.Entity<Security>()
             .HasKey(k => new { k.ProfileId, k.SecurityCode });
+
+
+        modelBuilder.Entity<ActScript>()
+            .HasKey(k => new { k.Id});
     }
+
 }

@@ -1,7 +1,7 @@
 using Domain.Attributes;
 using Domain.Frontol.Enums;
 
-namespace Domain.Frontol.Dto;
+namespace Domain.Frontol.Models.Settings;
 
 public record GlobalControl
 {

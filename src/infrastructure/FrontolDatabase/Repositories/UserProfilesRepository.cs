@@ -1,6 +1,6 @@
 using CSharpFunctionalExtensions;
-using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
+using Domain.Frontol.Models.Settings;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;

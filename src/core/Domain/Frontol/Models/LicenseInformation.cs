@@ -1,4 +1,4 @@
-namespace Domain.Frontol.Dto;
+namespace Domain.Frontol.Models;
 
 public record LicenseInformation
 {

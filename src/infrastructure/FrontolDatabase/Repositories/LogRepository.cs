@@ -1,5 +1,5 @@
-using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
+using Domain.Frontol.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

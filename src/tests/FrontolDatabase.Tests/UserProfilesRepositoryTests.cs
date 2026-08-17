@@ -1,5 +1,5 @@
-using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
+using Domain.Frontol.Models;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Repositories;
 using FrontolDatabase.Services;

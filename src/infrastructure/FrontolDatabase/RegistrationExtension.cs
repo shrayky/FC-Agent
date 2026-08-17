@@ -26,7 +26,7 @@ namespace FrontolDatabase
         private static IServiceCollection ConfigureMainDb(IServiceCollection services, DatabaseConnection dbConfig)
         {
             var serverName = @"localhost";
-            var databasePath = @"c:\temp\\main.gdb";
+            var databasePath = @"c:\\temp\\main.gdb";
 
             var fullDbPath = dbConfig.DatabasePath.Split(":");
 
@@ -44,6 +44,7 @@ namespace FrontolDatabase
             services.AddScoped<IFrontolMainDb, MainDbRepository>();
             services.AddScoped<IFrontolSettings, SettingsRepository>();
             services.AddScoped<IFrontolUserProfiles, UserProfilesRepository>();
+            services.AddScoped<IFrontolActionScripts, ActionScriptRepository>();
             
             return services;
         }

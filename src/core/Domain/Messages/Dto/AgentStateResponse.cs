@@ -1,5 +1,5 @@
 using Domain.Agent.Dto;
-using Domain.Frontol.Dto;
+using Domain.Frontol.Models;
 using Domain.Messages.Enums;
 using Domain.Messages.Interfaces;
 

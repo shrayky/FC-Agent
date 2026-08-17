@@ -1,4 +1,4 @@
-using Domain.Frontol.Dto;
+using Domain.Frontol.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CentralServerExchange.Services;

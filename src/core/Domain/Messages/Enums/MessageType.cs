@@ -5,5 +5,6 @@ public enum MessageType
     AgentState,
     NewVersionAsk,
     FrontolLog,
-    FrontolSettings
+    FrontolSettings,
+    FrontolSettingsApplying
 }

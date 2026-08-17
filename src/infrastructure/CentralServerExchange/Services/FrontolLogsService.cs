@@ -1,5 +1,5 @@
-using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
+using Domain.Frontol.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

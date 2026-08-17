@@ -1,7 +1,6 @@
 using Domain.Agent.Dto;
 using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
-using Domain.Frontol.Dto;
 using Domain.Frontol.Interfaces;
 using Domain.Messages.Dto;
 using Microsoft.Extensions.DependencyInjection;
