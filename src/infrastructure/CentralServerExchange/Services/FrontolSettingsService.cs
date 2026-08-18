@@ -26,12 +26,16 @@ public class FrontolSettingsService
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
 
         var globalConfig = await repository.GetGlobalControlConfig();
+        var parameters = await repository.GetParameters();
         var userProfiles = await userProfilesRepository.GetUserProfiles();
         var frontolScript = await actionScriptRepository.FromDb();
         var driverScripts = await cashRegisterScripts.FromFiles();
 
         if (globalConfig.IsFailure)
             return Result.Failure<FrontolSettings>(globalConfig.Error);
+
+        if (parameters.IsFailure)
+            return Result.Failure<FrontolSettings>(parameters.Error);
         
         if  (userProfiles.IsFailure)
             return Result.Failure<FrontolSettings>(userProfiles.Error);
@@ -52,6 +56,7 @@ public class FrontolSettingsService
         {
             GlobalControl = globalConfig.Value,
             UserProfiles = userProfiles.Value,
+            Settings = parameters.Value,
             Scripts = scripts
         };
         
@@ -68,6 +73,7 @@ public class FrontolSettingsService
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
 
         var updateSettings = await settingsRepository.LoadGlobalControlConfig(settings.GlobalControl)
+            .Tap(async () => await settingsRepository.LoadParameters(settings.Settings ?? []))
             .Tap(async () => await userRepository.LoadUserProfiles(settings.UserProfiles))
             .Tap(async () => await actionScriptRepository.ToDb(settings.Scripts.FrontolScript))
             .Tap(async () => await cashRegisterScripts.ToFiles(settings.Scripts.CashRegisterDriver10Scripts, settings.Scripts.UploadCashRegisterScripts))

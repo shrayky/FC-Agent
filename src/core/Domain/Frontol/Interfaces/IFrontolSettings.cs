@@ -12,4 +12,7 @@ public interface IFrontolSettings
     Task<Result> SetSetting(string name, string value);
     Task<Result<string>> GetSetting(string name);
 
+    Task<Result> LoadParameters(List<FrontolParameter> parameters);
+    Task<Result<List<FrontolParameter>>> GetParameters();
+
 }

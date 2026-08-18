@@ -102,4 +102,80 @@ public class SettingsRepository: IFrontolSettings
 
         return Result.Success(setting.Value);
     }
+
+    public async Task<Result> LoadParameters(List<FrontolParameter> parameters)
+    {
+        try
+        {
+            if (_ctx.Settings == null)
+                return Result.Failure("Не удалось открыть Settings");
+
+            var incoming = (parameters ?? [])
+                .Where(p => !string.IsNullOrWhiteSpace(p.Id))
+                .GroupBy(p => p.Id)
+                .Select(g => g.Last())
+                .ToList();
+
+            if (incoming.Count == 0)
+                return Result.Success();
+
+            var names = incoming.Select(p => p.Id).ToArray();
+            var rows = await _ctx.Settings
+                .Where(s => names.Contains(s.Name))
+                .ToListAsync();
+
+            var rowsByName = rows
+                .GroupBy(s => s.Name)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            foreach (var parameter in incoming)
+            {
+                if (!rowsByName.TryGetValue(parameter.Id, out var row))
+                {
+                    _logger.LogWarning("Настройка {name} не найдена в таблице SETTINGS, пропущена", parameter.Id);
+                    continue;
+                }
+
+                row.Value = FrontolTimeParsers.ToDb(parameter.Value);
+            }
+
+            await _ctx.SaveChangesAsync();
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            var err = $"Ошибка записи параметров в SETTINGS: {ex.Message}";
+            _logger.LogError(ex, err);
+            return Result.Failure(err);
+        }
+    }
+
+    public async Task<Result<List<FrontolParameter>>> GetParameters()
+    {
+        try
+        {
+            if (_ctx.Settings == null)
+                return Result.Failure<List<FrontolParameter>>("Не удалось открыть Settings");
+
+            var rows = await _ctx.Settings
+                .AsNoTracking()
+                .Where(s => s.Name != "")
+                .Select(s => new { s.Name, s.Value })
+                .ToListAsync();
+
+            var parameters = rows.Select(s => new FrontolParameter
+            {
+                Id = s.Name,
+                Value = FrontolTimeParsers.FromDb(s.Value)
+            }).ToList();
+
+            return Result.Success(parameters);
+        }
+        catch (Exception ex)
+        {
+            var err = $"Ошибка чтения параметров из SETTINGS: {ex.Message}";
+            _logger.LogError(ex, err);
+            return Result.Failure<List<FrontolParameter>>(err);
+        }
+    }
 }
