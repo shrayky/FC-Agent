@@ -404,22 +404,3 @@ FodyWeavers.xsd
 
 # vscode ide files
 .vscode/launch.json
-/builds/x86-host/fc.exe
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css.br
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css.gz
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css.map
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css.map.br
-/builds/2-1/fc-agent/2.1.0/wwwroot/bootstrap/bootstrap.min.css.map.gz
-/builds/2-1/fc-agent/2.1.0/fc-agent.exe
-/builds/2-1/fc-agent/2.1.0/wwwroot/app.css
-/builds/2-1/fc-agent/2.1.0/wwwroot/app.css.br
-/builds/2-1/fc-agent/2.1.0/wwwroot/app.css.gz
-/builds/2-1/fc-agent/2.1.0/wwwroot/favicon.png
-/builds/2-1/fc-agent-2-1-win-x86.zip
-/builds/2-1/fc-remote/1.1.3/fc-remote.exe
-/builds/2-1/fc.exe
-/builds/x86 windows/wwwroot/bootstrap/bootstrap.min.css
-/builds/x86 windows/wwwroot/bootstrap/bootstrap.min.css.map
-/builds/x86 windows/wwwroot/favicon.png
-/builds/x86 windows/wwwroot/app.css

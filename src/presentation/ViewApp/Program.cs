@@ -4,16 +4,18 @@ using Configuration;
 using Domain.Configuration;
 using FrontolDatabase;
 using Logger;
-using ViewApp.Services;
 using ViewApp.Workers;
 
-const int ipPort = 2587;
-
-if (args.Length > 0)
+if (args.Contains("--help"))
 {
-    StartService.ProcessStartWithArguments(args, ipPort);
+    Console.WriteLine("Использование:");
+    Console.WriteLine("--service - запуск как дочерний процесс host-службы");
+    Console.WriteLine("--help - эта справка");
     return;
 }
+
+if (args.Length > 0 && !args.Contains("--service"))
+    return;
 
 var settingsLoadResult = await ParametersLoader.LoadFromAppFolder();
 Parameters appSettings = new();
