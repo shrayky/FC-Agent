@@ -1,4 +1,5 @@
-﻿using Domain.AppState.Interfaces;
+﻿using Configuration.Services;
+using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Interfaces;
 
@@ -10,20 +11,28 @@ namespace ViewApp.Workers
         private readonly IApplicationState _applicationState;
         private readonly IFrontolIni _frontolIni;
         private readonly IParametersService _parametersService;
+        private readonly SidecarConnectionImporter _sidecarImporter;
 
-        public AfterStartWorker(ILogger<AfterStartWorker> logger, IApplicationState applicationState, IFrontolIni frontolIni, IParametersService parametersService)
+        public AfterStartWorker(
+            ILogger<AfterStartWorker> logger,
+            IApplicationState applicationState,
+            IFrontolIni frontolIni,
+            IParametersService parametersService,
+            SidecarConnectionImporter sidecarImporter)
         {
             _logger = logger;
             _applicationState = applicationState;
             _frontolIni = frontolIni;
             _parametersService = parametersService;
+            _sidecarImporter = sidecarImporter;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var settings = await _parametersService.Current();
+            var imported = _sidecarImporter.TryImport(settings);
 
-            if (_parametersService.NeedDoMigration(settings))
+            if (imported || _parametersService.NeedDoMigration(settings))
             {
                 await _parametersService.Update(settings);
             }

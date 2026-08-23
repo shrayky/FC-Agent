@@ -404,3 +404,10 @@ FodyWeavers.xsd
 
 # vscode ide files
 .vscode/launch.json
+*.exe
+*.zip
+*.css
+*.br
+*.gz
+*.map
+/builds/2-1/fc-agent/2.1.0/wwwroot/favicon.png
