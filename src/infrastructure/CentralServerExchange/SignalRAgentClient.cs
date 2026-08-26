@@ -1,8 +1,7 @@
 using CentralServerExchange.Services;
 using CSharpFunctionalExtensions;
-using Domain.Agent.Dto;
+using Domain.Agent;
 using Domain.AppState.Interfaces;
-using Domain.Configuration.Constants;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Models;
 using Domain.Messages.Dto;
@@ -121,11 +120,7 @@ public class SignalRAgentClient
         var agentData = new AgentStateResponse()
         {
             AgentToken = _agentId,
-            AgentInformation = new AgentData
-            {
-                Version = ApplicationInformation.Version,
-                Assembly = ApplicationInformation.Assembly,    
-            },
+            AgentInformation = AgentDataFactory.Current(),
         };
         
         try
@@ -277,11 +272,7 @@ public class SignalRAgentClient
         NewVersionRequest message = new()
         {
             AgentToken = _agentId,
-            AgentInformation = new AgentData
-            {
-                Version = ApplicationInformation.Version,
-                Assembly = ApplicationInformation.Assembly,
-            }
+            AgentInformation = AgentDataFactory.Current()
         };
         
         try
