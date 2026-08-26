@@ -34,6 +34,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Configuration.Tests", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain.Tests", "src\tests\Domain.Tests\Domain.Tests.csproj", "{49BBD26C-A9CB-49A9-B4D5-94B228F4EE24}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{C4E8B1A2-7D5F-4A13-9E6C-1B8D0F2A3C45}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "_build", "build\_build.csproj", "{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -200,6 +204,18 @@ Global
 		{49BBD26C-A9CB-49A9-B4D5-94B228F4EE24}.Release|x64.Build.0 = Release|Any CPU
 		{49BBD26C-A9CB-49A9-B4D5-94B228F4EE24}.Release|x86.ActiveCfg = Release|Any CPU
 		{49BBD26C-A9CB-49A9-B4D5-94B228F4EE24}.Release|x86.Build.0 = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|x64.Build.0 = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Debug|x86.Build.0 = Debug|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|x64.ActiveCfg = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|x64.Build.0 = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|x86.ActiveCfg = Release|Any CPU
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -217,6 +233,7 @@ Global
 		{1C2A2F0B-9376-41AC-B4CA-C6C6887886D6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{B4419A68-8832-42E9-8771-610E4FC9B55E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{49BBD26C-A9CB-49A9-B4D5-94B228F4EE24} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{8F2C1A4E-6B3D-4E91-9C47-2D5A8B0E1F36} = {C4E8B1A2-7D5F-4A13-9E6C-1B8D0F2A3C45}
 	EndGlobalSection
 	GlobalSection(RiderSharedRunConfigurations) = postSolution
 		File = x64-win\win x64.run.xml

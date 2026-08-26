@@ -4,8 +4,6 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        
-        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 
         <DebugType>portable</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -34,11 +32,9 @@
     <Target Name="CleanupPublishFolder" AfterTargets="Publish">
         <ItemGroup>
             <FilesToDelete Include="$(PublishDir)**\*.pdb"/>
-            <FilesToDelete Include="$(PublishDir)**\*.json"/>
-            <FilesToDelete Include="$(PublishDir)**\*.config"/>
         </ItemGroup>
         <Delete Files="@(FilesToDelete)"/>
-        <Message Text="Удалены .pdb и .json файлы из папки публикации" Importance="high"/>
+        <Message Text="Удалены .pdb из папки публикации" Importance="high"/>
     </Target>
 
 </Project>
