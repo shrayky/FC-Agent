@@ -6,7 +6,7 @@ using Domain.DotNet;
 namespace Domain.Agent;
 
 /// <summary>
-/// Собирает версию агента и сведения о машине для командира.
+/// Собирает версию агента и сведения о машине для fc.
 /// </summary>
 public static class AgentDataFactory
 {
