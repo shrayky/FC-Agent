@@ -1,5 +1,4 @@
-using Domain.Agent.Dto;
-using Domain.Configuration.Constants;
+using Domain.Agent;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Interfaces;
 using Domain.Messages.Dto;
@@ -44,11 +43,7 @@ public class FrontolStateService
         {
             AgentToken = settings.CentralServerSettings.Token,
             
-            AgentInformation = new AgentData
-            {
-                Version = ApplicationInformation.Version,
-                Assembly = ApplicationInformation.Assembly,    
-            },
+            AgentInformation = AgentDataFactory.Current(),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),
