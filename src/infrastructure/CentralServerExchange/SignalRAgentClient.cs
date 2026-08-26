@@ -51,7 +51,11 @@ public class SignalRAgentClient
         }
         
         _connection = new HubConnectionBuilder()
-            .WithUrl(_hubUrl)
+            .WithUrl(_hubUrl, options =>
+            {
+                if (ForceHttp11MessageHandler.IsRequiredOnThisOs)
+                    options.HttpMessageHandlerFactory = inner => new ForceHttp11MessageHandler(inner);
+            })
             .WithAutomaticReconnect([
                 TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30)
             ])
@@ -98,7 +102,11 @@ public class SignalRAgentClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при подключении к SignalR серверу");
+            _logger.LogError(
+                ex,
+                "Ошибка при подключении к SignalR серверу. HubUrl: {HubUrl}, OS: {OS}",
+                _hubUrl,
+                Environment.OSVersion);
         }
     }
     

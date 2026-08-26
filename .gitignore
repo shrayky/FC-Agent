@@ -17,6 +17,7 @@
 mono_crash.*
 
 # Build results
+builds/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -401,6 +402,8 @@ FodyWeavers.xsd
 **/rider.project.model.nuget.info
 **/*.assets.cache
 **/*.DotSettings.user
+.idea/**/indexLayout.xml
+.idea/**/riderPublish.xml
 
 # vscode ide files
 .vscode/launch.json

@@ -1,0 +1,58 @@
+using System.Net;
+using System.Net.Security;
+using System.Security.Authentication;
+
+namespace CentralServerExchange;
+
+/// <summary>
+/// Принудительно HTTP/1.1 и TLS 1.2.
+/// Нужно для Windows 7/8: Schannel не умеет ALPN/HTTP/2 и TLS 1.3, .NET 10 иначе падает с 0x80090302.
+/// </summary>
+internal sealed class ForceHttp11MessageHandler : DelegatingHandler
+{
+    internal static bool IsRequiredOnThisOs =>
+        OperatingSystem.IsWindows() && !OperatingSystem.IsWindowsVersionAtLeast(10);
+
+    public ForceHttp11MessageHandler(HttpMessageHandler innerHandler)
+        : base(innerHandler)
+    {
+        RestrictToTls12(innerHandler);
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        RestrictToHttp11(request);
+        return base.SendAsync(request, cancellationToken);
+    }
+
+    protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        RestrictToHttp11(request);
+        return base.Send(request, cancellationToken);
+    }
+
+    private static void RestrictToHttp11(HttpRequestMessage request)
+    {
+        request.Version = HttpVersion.Version11;
+        request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+    }
+
+    internal static void RestrictToTls12(HttpMessageHandler handler)
+    {
+        switch (handler)
+        {
+            case SocketsHttpHandler sockets:
+                sockets.SslOptions ??= new SslClientAuthenticationOptions();
+                sockets.SslOptions.EnabledSslProtocols = SslProtocols.Tls12;
+                break;
+            case HttpClientHandler http:
+                http.SslProtocols = SslProtocols.Tls12;
+                break;
+            case DelegatingHandler { InnerHandler: not null } nested:
+                RestrictToTls12(nested.InnerHandler);
+                break;
+        }
+    }
+}
