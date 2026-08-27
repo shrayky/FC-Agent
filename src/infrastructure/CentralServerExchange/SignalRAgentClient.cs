@@ -3,10 +3,13 @@ using CSharpFunctionalExtensions;
 using Domain.Agent;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
+using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
 using Domain.Messages.Dto;
 using Domain.Messages.Enums;
+using DotNetHost;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -18,6 +21,7 @@ public class SignalRAgentClient
     private readonly IParametersService _parametersService;
     private readonly IApplicationState _applicationState;
     private readonly FrontolSettingsService _frontolSettingsService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     
     private string _hubUrl = string.Empty;
     private string _agentId = string.Empty;
@@ -27,12 +31,13 @@ public class SignalRAgentClient
     
     private bool _isRegistered;
 
-    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState, FrontolSettingsService frontolSettingsService)
+    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState, FrontolSettingsService frontolSettingsService, IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
         _parametersService = parametersService;
         _applicationState = applicationState;
         _frontolSettingsService = frontolSettingsService;
+        _serviceScopeFactory = serviceScopeFactory;
     }
     
     public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
@@ -65,6 +70,7 @@ public class SignalRAgentClient
         _connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
         _connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
         _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
+        _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
 
         _connection.Reconnecting += error =>
         {
@@ -120,7 +126,7 @@ public class SignalRAgentClient
         var agentData = new AgentStateResponse()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current(),
+            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows()),
         };
         
         try
@@ -204,6 +210,18 @@ public class SignalRAgentClient
         if (applyingResult.IsSuccess)
             await SendFrontolSettingsApplyingIsSuccess();
     }
+
+    private async Task OnPaySystemMode(PaySystemModeRequest message)
+    {
+        _logger.LogInformation("Получена команда режима банковских систем: {Mode}", message.Mode);
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IPaySystemModeService>();
+        var result = await service.ChangeMode(message.Mode);
+
+        if (result.IsFailure)
+            _logger.LogError(result.Error);
+    }
     
     public async Task StopAsync()
     {
@@ -272,7 +290,7 @@ public class SignalRAgentClient
         NewVersionRequest message = new()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current()
+            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows())
         };
         
         try

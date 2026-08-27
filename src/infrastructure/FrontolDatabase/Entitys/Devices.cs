@@ -4,7 +4,7 @@ using Domain.Frontol.Enums;
 
 namespace FrontolDatabase.Entitys;
 
-[Table("Devices")]
+[Table("DEVICES")]
 public class Devices
 {
     [Key]

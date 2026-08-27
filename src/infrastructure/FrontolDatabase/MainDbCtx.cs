@@ -11,6 +11,7 @@ public class MainDbCtx : DbContext
     public DbSet<Profile>? UserProfiles { get; set; }
     public DbSet<Security>? UserProfileSecurity { get; set; }
     public DbSet<ActScript>? ActionScripts {  get; set; }
+    public DbSet<Devices>? Devices { get; set; }
     
     private readonly string _connectionString = string.Empty;   
     
@@ -69,6 +70,17 @@ public class MainDbCtx : DbContext
 
         modelBuilder.Entity<ActScript>()
             .HasKey(k => new { k.Id});
+
+        modelBuilder.Entity<Devices>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<Devices>()
+            .Property(p => p.KeepConnetion)
+            .HasConversion(boolToIntConverter);
+
+        modelBuilder.Entity<Devices>()
+            .Property(p => p.IsFolder)
+            .HasConversion(boolToIntConverter);
     }
 
 }

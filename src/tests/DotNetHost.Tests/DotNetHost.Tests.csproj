@@ -15,18 +15,14 @@
         <PackageReference Include="NUnit" />
         <PackageReference Include="NUnit.Analyzers" />
         <PackageReference Include="NUnit3TestAdapter" />
-        <PackageReference Include="Moq" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="NUnit.Framework"/>
+        <Using Include="NUnit.Framework" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\core\Domain\Domain.csproj" />
-        <ProjectReference Include="..\..\core\Application\Application.csproj" />
-        <ProjectReference Include="..\..\infrastructure\FrontolDatabase\FrontolDatabase.csproj" />
+        <ProjectReference Include="..\..\infrastructure\DotNetHost\DotNetHost.csproj" />
     </ItemGroup>
 
 </Project>

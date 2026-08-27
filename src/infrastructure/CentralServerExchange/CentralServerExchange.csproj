@@ -15,6 +15,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\core\Domain\Domain.csproj" />
       <ProjectReference Include="..\..\core\Shared\Shared.csproj" />
+      <ProjectReference Include="..\DotNetHost\DotNetHost.csproj" />
     </ItemGroup>
     
 </Project>

@@ -2,6 +2,7 @@ using Domain.Agent;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Interfaces;
 using Domain.Messages.Dto;
+using DotNetHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -43,7 +44,7 @@ public class FrontolStateService
         {
             AgentToken = settings.CentralServerSettings.Token,
             
-            AgentInformation = AgentDataFactory.Current(),
+            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows()),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),
