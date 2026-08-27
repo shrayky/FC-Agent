@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using Domain.Agent.Dto;
 using Domain.Configuration.Constants;
-using Domain.DotNet;
 
 namespace Domain.Agent;
 
@@ -13,17 +12,17 @@ public static class AgentDataFactory
     /// <summary>
     /// Текущая версия, ОС, архитектура, .NET, имя ПК и IP.
     /// </summary>
-    public static AgentData Current()
+    public static AgentData Current(IReadOnlyList<string> installedRuntimes)
     {
         return new AgentData
         {
             Version = ApplicationInformation.Version,
             Assembly = ApplicationInformation.Assembly,
             Os = "windows",
-            Architecture = RuntimeInformation.OSArchitecture == Architecture.X86 ? "x86" : "x64",
+            Architecture = AgentArchitecture.Name(RuntimeInformation.ProcessArchitecture),
             HostName = MachineNetworkInfo.HostName(),
             IpAddresses = MachineNetworkInfo.ListAddresses(),
-            InstalledRuntimes = InstalledDotNetRuntimes.ListFromWindows()
+            InstalledRuntimes = [..installedRuntimes]
         };
     }
 }

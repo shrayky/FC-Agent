@@ -27,7 +27,7 @@ internal static class AspNetRuntimeSetup
     /// Нужно ставить runtime, если требование 10.0 не закрыто.
     /// </summary>
     public static bool NeedsInstall(IReadOnlyList<string> installed) =>
-        !InstalledDotNetRuntimes.IsSatisfied(installed, RequiredRuntime);
+        !DotNetRuntimeRequirement.IsSatisfied(installed, RequiredRuntime);
 
     /// <summary>
     /// 0 — успех, 3010 — успех с запросом перезагрузки (перезагрузку не делаем).

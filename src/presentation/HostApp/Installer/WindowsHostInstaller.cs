@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
-using Domain.DotNet;
+using DotNetHost;
 using HostApp.Services;
 
 namespace HostApp.Installer;
