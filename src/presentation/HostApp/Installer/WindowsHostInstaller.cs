@@ -136,45 +136,48 @@ internal sealed class WindowsHostInstaller
     }
 
     /// <summary>
-    /// Ставит ASP.NET Core Runtime из runtime\*.exe до копирования FDD-продуктов.
+    /// Ставит .NET Runtime и ASP.NET Core из runtime\*.exe до копирования FDD-продуктов.
     /// </summary>
     private async Task EnsureAspNetRuntimeAsync(string setupFolder)
     {
-        var installer = AspNetRuntimeSetup.FindInstaller(setupFolder);
-        if (installer is null)
+        var installers = AspNetRuntimeSetup.FindInstallers(setupFolder);
+        if (installers.Count == 0)
         {
-            LogInfo("Установщик ASP.NET Runtime в пакете отсутствует — шаг пропущен.");
+            LogInfo("Установщики runtime в пакете отсутствуют — шаг пропущен.");
             return;
         }
 
         var installed = InstalledDotNetRuntimes.ListFromWindows();
         if (!AspNetRuntimeSetup.NeedsInstall(installed))
         {
-            LogInfo("Microsoft.AspNetCore.App 10 уже установлен — установщик не запускаем.");
+            LogInfo("Microsoft.NETCore.App и Microsoft.AspNetCore.App 10 уже установлены — установщики не запускаем.");
             return;
         }
 
-        LogInfo($"Устанавливаю ASP.NET Runtime: {installer}");
-
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
+        foreach (var installer in installers)
         {
-            FileName = installer,
-            Arguments = "/install /quiet /norestart",
-            CreateNoWindow = true,
-            UseShellExecute = false
-        };
+            LogInfo($"Устанавливаю runtime: {installer}");
 
-        if (!process.Start())
-            throw new InvalidOperationException("Не удалось запустить установщик ASP.NET Runtime.");
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = installer,
+                Arguments = "/install /quiet /norestart",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
 
-        await process.WaitForExitAsync();
+            if (!process.Start())
+                throw new InvalidOperationException($"Не удалось запустить установщик runtime: {installer}");
 
-        if (!AspNetRuntimeSetup.IsSuccessExitCode(process.ExitCode))
-            throw new InvalidOperationException(
-                $"Установка ASP.NET Runtime завершилась кодом {process.ExitCode}");
+            await process.WaitForExitAsync();
 
-        LogInfo("Установка ASP.NET Runtime завершена.");
+            if (!AspNetRuntimeSetup.IsSuccessExitCode(process.ExitCode))
+                throw new InvalidOperationException(
+                    $"Установка {Path.GetFileName(installer)} завершилась кодом {process.ExitCode}");
+
+            LogInfo($"Установка {Path.GetFileName(installer)} завершена.");
+        }
     }
 
     private async Task InstallHostAsync(string setupFolder)

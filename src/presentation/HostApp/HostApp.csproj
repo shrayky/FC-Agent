@@ -8,7 +8,10 @@
         <RootNamespace>HostApp</RootNamespace>
 		<Version>1.2.0</Version>
 
-		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+		<PublishAot>true</PublishAot>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<StackTraceSupport>false</StackTraceSupport>
+		<UseSystemResourceKeys>true</UseSystemResourceKeys>
 
 		<DebugType>portable</DebugType>
 		<DebugSymbols>true</DebugSymbols>

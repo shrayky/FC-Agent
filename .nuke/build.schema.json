@@ -103,13 +103,17 @@
           "type": "string",
           "description": "Архитектура пакета: x64 или x86"
         },
+        "DotNetRuntimeInstaller": {
+          "type": "string",
+          "description": "Готовый dotnet-runtime-*-win-*.exe; если пусто — скачиваем"
+        },
         "RuntimeInstaller": {
           "type": "string",
           "description": "Готовый aspnetcore-runtime-*-win-*.exe; если пусто — скачиваем"
         },
         "RuntimeVersion": {
           "type": "string",
-          "description": "Версия ASP.NET Core Runtime для скачивания, например 10.0.2"
+          "description": "Версия .NET / ASP.NET Runtime для скачивания, например 10.0.11"
         },
         "Version": {
           "type": "string",

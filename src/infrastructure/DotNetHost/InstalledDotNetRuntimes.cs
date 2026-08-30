@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace DotNetHost;
 
 /// <summary>
@@ -47,20 +49,35 @@ public static class InstalledDotNetRuntimes
     }
 
     /// <summary>
-    /// Читает shared framework из Program Files и Program Files (x86).
+    /// Читает shared framework из корня dotnet, только если есть host\fxr.
+    /// Без hostfxr apphost пишет ".NET location: Not found".
+    /// </summary>
+    public static List<string> ListFromDotNetRoot(string dotnetRoot)
+    {
+        if (string.IsNullOrWhiteSpace(dotnetRoot) || !Directory.Exists(dotnetRoot))
+            return [];
+
+        var fxrDir = Path.Combine(dotnetRoot, "host", "fxr");
+        if (!Directory.Exists(fxrDir) || !Directory.EnumerateDirectories(fxrDir).Any())
+            return [];
+
+        var shared = Path.Combine(dotnetRoot, "shared");
+        return ListFromRoots([shared]);
+    }
+
+    /// <summary>
+    /// Читает shared framework из dotnet-корня архитектуры текущего процесса.
+    /// x86 смотрит Program Files (x86): x64 runtime не закрывает win-x86 apphost.
     /// </summary>
     public static List<string> ListFromWindows()
     {
-        var roots = new List<string>();
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var programFiles = RuntimeInformation.ProcessArchitecture == Architecture.X86
+            ? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
-        if (!string.IsNullOrEmpty(programFiles))
-            roots.Add(Path.Combine(programFiles, "dotnet", "shared"));
+        if (string.IsNullOrEmpty(programFiles))
+            return [];
 
-        if (!string.IsNullOrEmpty(programFilesX86))
-            roots.Add(Path.Combine(programFilesX86, "dotnet", "shared"));
-
-        return ListFromRoots(roots);
+        return ListFromDotNetRoot(Path.Combine(programFiles, "dotnet"));
     }
 }

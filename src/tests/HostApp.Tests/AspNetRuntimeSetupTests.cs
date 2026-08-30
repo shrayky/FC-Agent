@@ -6,16 +6,16 @@ namespace HostApp.Tests;
 public class AspNetRuntimeSetupTests
 {
     /// <summary>
-    /// В лёгком пакете папки runtime нет — установщик не ищем.
+    /// В лёгком пакете папки runtime нет — установщики не ищем.
     /// </summary>
     [Test]
-    public void FindInstaller_null_если_папки_нет()
+    public void FindInstallers_пусто_если_папки_нет()
     {
         var root = Path.Combine(Path.GetTempPath(), "fc-pack-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try
         {
-            Assert.That(AspNetRuntimeSetup.FindInstaller(root), Is.Null);
+            Assert.That(AspNetRuntimeSetup.FindInstallers(root), Is.Empty);
         }
         finally
         {
@@ -27,7 +27,7 @@ public class AspNetRuntimeSetupTests
     /// Полный пакет кладёт exe в runtime\.
     /// </summary>
     [Test]
-    public void FindInstaller_находит_exe_в_runtime()
+    public void FindInstallers_находит_exe_в_runtime()
     {
         var root = Path.Combine(Path.GetTempPath(), "fc-pack-" + Guid.NewGuid());
         var runtime = Path.Combine(root, "runtime");
@@ -36,7 +36,7 @@ public class AspNetRuntimeSetupTests
         File.WriteAllBytes(exe, [0]);
         try
         {
-            Assert.That(AspNetRuntimeSetup.FindInstaller(root), Is.EqualTo(exe));
+            Assert.That(AspNetRuntimeSetup.FindInstallers(root), Is.EqualTo(new[] { exe }));
         }
         finally
         {
@@ -45,13 +45,53 @@ public class AspNetRuntimeSetupTests
     }
 
     /// <summary>
-    /// Если ASP.NET 10 уже стоит, установщик не запускаем.
+    /// .NET Runtime ставится до ASP.NET Core — без hostfxr apphost не стартует.
     /// </summary>
     [Test]
-    public void NeedsInstall_false_если_10_уже_есть()
+    public void FindInstallers_dotnet_runtime_перед_aspnetcore()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fc-pack-" + Guid.NewGuid());
+        var runtime = Path.Combine(root, "runtime");
+        Directory.CreateDirectory(runtime);
+        var aspnet = Path.Combine(runtime, "aspnetcore-runtime-10.0.11-win-x86.exe");
+        var dotnet = Path.Combine(runtime, "dotnet-runtime-10.0.11-win-x86.exe");
+        File.WriteAllBytes(aspnet, [0]);
+        File.WriteAllBytes(dotnet, [0]);
+        try
+        {
+            Assert.That(
+                AspNetRuntimeSetup.FindInstallers(root),
+                Is.EqualTo(new[] { dotnet, aspnet }));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
+    /// Одного AspNetCore мало: без Microsoft.NETCore.App apphost не находит .NET.
+    /// </summary>
+    [Test]
+    public void NeedsInstall_true_если_только_AspNetCore()
     {
         Assert.That(
-            AspNetRuntimeSetup.NeedsInstall(["Microsoft.AspNetCore.App/10.0.2"]),
+            AspNetRuntimeSetup.NeedsInstall(["Microsoft.AspNetCore.App/10.0.11"]),
+            Is.True);
+    }
+
+    /// <summary>
+    /// Оба shared framework 10 закрывают требование — установщики не запускаем.
+    /// </summary>
+    [Test]
+    public void NeedsInstall_false_если_оба_10_уже_есть()
+    {
+        Assert.That(
+            AspNetRuntimeSetup.NeedsInstall(
+            [
+                "Microsoft.NETCore.App/10.0.11",
+                "Microsoft.AspNetCore.App/10.0.11"
+            ]),
             Is.False);
     }
 

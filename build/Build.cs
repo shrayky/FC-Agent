@@ -11,14 +11,17 @@ class Build : NukeBuild
     [Parameter("Версия архива, например 2-3. По умолчанию из ApplicationInformation.")]
     readonly string Version = default!;
 
-    [Parameter("Архитектура пакета: x64 или x86")]
-    readonly string Architecture = "x64";
+    [Parameter("Архитектура пакета: x86 или x64. По умолчанию x86, как agents-builds.")]
+    readonly string Architecture = "x86";
 
-    [Parameter("Версия ASP.NET Core Runtime для скачивания, например 10.0.2")]
-    readonly string RuntimeVersion = "10.0.2";
+    [Parameter("Версия .NET / ASP.NET Runtime для скачивания, например 10.0.11")]
+    readonly string RuntimeVersion = "10.0.11";
 
     [Parameter("Готовый aspnetcore-runtime-*-win-*.exe; если пусто — скачиваем")]
     readonly string RuntimeInstaller = default!;
+
+    [Parameter("Готовый dotnet-runtime-*-win-*.exe; если пусто — скачиваем")]
+    readonly string DotNetRuntimeInstaller = default!;
 
     AbsolutePath HostProject => RootDirectory / "src" / "presentation" / "HostApp" / "HostApp.csproj";
     AbsolutePath AgentProject => RootDirectory / "src" / "presentation" / "ViewApp" / "ViewApp.csproj";
@@ -41,7 +44,7 @@ class Build : NukeBuild
         .DependsOn(PublishWindows)
         .Executes(async () =>
         {
-            var installer = await EnsureRuntimeInstallerAsync();
+            var installers = await EnsureRuntimeInstallersAsync();
             var version = EnsureArchiveVersion();
             var arch = NormalizedArchitecture();
             var productFolder = $"{ApplicationInformation.Version}.{ApplicationInformation.Assembly}";
@@ -55,7 +58,8 @@ class Build : NukeBuild
 
             var runtimeDir = staging / "runtime";
             runtimeDir.CreateDirectory();
-            CopyItem(installer, runtimeDir / installer.Name);
+            foreach (var installer in installers)
+                CopyItem(installer, runtimeDir / installer.Name);
 
             var rtZip = BuildsDirectory / $"{version}_{arch}_windows_rt.zip";
             ZipStaging(staging, rtZip, deleteStaging: true);
@@ -66,7 +70,8 @@ class Build : NukeBuild
         });
 
     /// <summary>
-    /// Публикует host как self-contained single-file — он должен стартовать без системного runtime.
+    /// Публикует host Native AOT — нативный exe без JIT, стартует без установленного .NET.
+    /// PublishSingleFile нельзя: AOT уже даёт один native-файл.
     /// </summary>
     void PublishHost(string rid)
     {
@@ -76,7 +81,8 @@ class Build : NukeBuild
             .SetConfiguration("Release")
             .SetRuntime(rid)
             .SetSelfContained(true)
-            .SetPublishSingleFile(true)
+            .SetPublishSingleFile(false)
+            .SetProperty("PublishAot", "true")
             .SetOutput(HostPublish));
     }
 
@@ -120,27 +126,49 @@ class Build : NukeBuild
     }
 
     /// <summary>
-    /// Берёт готовый установщик runtime или скачивает его в builds/runtime.
+    /// Берёт готовые установщики или скачивает .NET Runtime и ASP.NET Core Runtime.
     /// </summary>
-    async Task<AbsolutePath> EnsureRuntimeInstallerAsync()
+    async Task<IReadOnlyList<AbsolutePath>> EnsureRuntimeInstallersAsync()
     {
-        if (!string.IsNullOrWhiteSpace(RuntimeInstaller))
+        var rid = RuntimeIdentifier();
+        var cacheDir = BuildsDirectory / "runtime";
+        cacheDir.CreateDirectory();
+
+        var dotnetRuntime = await EnsureInstallerAsync(
+            DotNetRuntimeInstaller,
+            $"dotnet-runtime-{RuntimeVersion}-{rid}.exe",
+            $"https://builds.dotnet.microsoft.com/dotnet/Runtime/{RuntimeVersion}/dotnet-runtime-{RuntimeVersion}-{rid}.exe",
+            cacheDir);
+
+        var aspNetRuntime = await EnsureInstallerAsync(
+            RuntimeInstaller,
+            $"aspnetcore-runtime-{RuntimeVersion}-{rid}.exe",
+            $"https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/{RuntimeVersion}/aspnetcore-runtime-{RuntimeVersion}-{rid}.exe",
+            cacheDir);
+
+        return [dotnetRuntime, aspNetRuntime];
+    }
+
+    /// <summary>
+    /// Возвращает готовый exe или скачивает его в builds/runtime.
+    /// </summary>
+    async Task<AbsolutePath> EnsureInstallerAsync(
+        string providedPath,
+        string fileName,
+        string url,
+        AbsolutePath cacheDir)
+    {
+        if (!string.IsNullOrWhiteSpace(providedPath))
         {
-            AbsolutePath path = RuntimeInstaller;
+            AbsolutePath path = providedPath;
             Assert.True(path.FileExists(), $"Не найден установщик runtime: {path}");
             return path;
         }
 
-        var rid = RuntimeIdentifier();
-        var fileName = $"aspnetcore-runtime-{RuntimeVersion}-{rid}.exe";
-        var cacheDir = BuildsDirectory / "runtime";
-        cacheDir.CreateDirectory();
         var cached = cacheDir / fileName;
         if (cached.FileExists())
             return cached;
 
-        var url =
-            $"https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/{RuntimeVersion}/{fileName}";
         Serilog.Log.Information("Скачиваю {Url}", url);
 
         try
@@ -156,7 +184,7 @@ class Build : NukeBuild
         {
             if (cached.FileExists())
                 cached.DeleteFile();
-            throw new InvalidOperationException($"Не удалось скачать ASP.NET Runtime: {url}", ex);
+            throw new InvalidOperationException($"Не удалось скачать runtime: {url}", ex);
         }
 
         Assert.True(cached.FileExists() && new FileInfo(cached).Length > 0,
@@ -168,7 +196,7 @@ class Build : NukeBuild
 
     string NormalizedArchitecture()
     {
-        var value = string.IsNullOrWhiteSpace(Architecture) ? "x64" : Architecture.Trim().ToLowerInvariant();
+        var value = string.IsNullOrWhiteSpace(Architecture) ? "x86" : Architecture.Trim().ToLowerInvariant();
         Assert.True(value is "x64" or "x86", $"Неизвестная архитектура: {Architecture}");
         return value;
     }

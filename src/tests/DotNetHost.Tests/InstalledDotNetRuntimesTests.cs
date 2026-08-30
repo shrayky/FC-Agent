@@ -74,6 +74,49 @@ public class InstalledDotNetRuntimesTests
     }
 
     /// <summary>
+    /// Папка shared без host\fxr не считается установленным runtime — apphost его не найдёт.
+    /// </summary>
+    [Test]
+    public void ListFromDotNetRoot_пусто_без_hostfxr()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fc-dotnet-root-" + Guid.NewGuid());
+        Directory.CreateDirectory(Path.Combine(root, "shared", "Microsoft.AspNetCore.App", "10.0.11"));
+
+        try
+        {
+            Assert.That(InstalledDotNetRuntimes.ListFromDotNetRoot(root), Is.Empty);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
+    /// При наличии host\fxr shared framework попадает в список.
+    /// </summary>
+    [Test]
+    public void ListFromDotNetRoot_читает_shared_если_есть_fxr()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "fc-dotnet-root-" + Guid.NewGuid());
+        Directory.CreateDirectory(Path.Combine(root, "host", "fxr", "10.0.11"));
+        Directory.CreateDirectory(Path.Combine(root, "shared", "Microsoft.NETCore.App", "10.0.11"));
+        Directory.CreateDirectory(Path.Combine(root, "shared", "Microsoft.AspNetCore.App", "10.0.11"));
+
+        try
+        {
+            var list = InstalledDotNetRuntimes.ListFromDotNetRoot(root);
+
+            Assert.That(list, Does.Contain("Microsoft.NETCore.App/10.0.11"));
+            Assert.That(list, Does.Contain("Microsoft.AspNetCore.App/10.0.11"));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
     /// Один и тот же каталог, переданный дважды, не даёт дублей.
     /// </summary>
     [Test]
