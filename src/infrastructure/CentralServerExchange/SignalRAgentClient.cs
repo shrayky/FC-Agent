@@ -123,10 +123,14 @@ public class SignalRAgentClient
             return;
         }
        
+        var settings = await _parametersService.Current();
         var agentData = new AgentStateResponse()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows()),
+            AgentInformation = AgentDataFactory.Current(
+                InstalledDotNetRuntimes.ListFromWindows(),
+                settings.DatabaseConnection.DatabasePath,
+                settings.DatabaseConnection.LogDatabasePath),
         };
         
         try
@@ -290,7 +294,10 @@ public class SignalRAgentClient
         NewVersionRequest message = new()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows())
+            AgentInformation = AgentDataFactory.Current(
+                InstalledDotNetRuntimes.ListFromWindows(),
+                settings.DatabaseConnection.DatabasePath,
+                settings.DatabaseConnection.LogDatabasePath)
         };
         
         try

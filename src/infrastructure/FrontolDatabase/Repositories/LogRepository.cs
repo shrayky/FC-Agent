@@ -1,3 +1,4 @@
+using Domain.Frontol;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public class LogRepository : IFrontolLog
 
         try
         {
-            return await _dbContext.Logs.Where(p => p.Id > fromId && (p.Category == "E" || p.Category == "D"))
+            var errors = await _dbContext.Logs.Where(p => p.Id > fromId && (p.Category == "E" || p.Category == "D"))
                 .Select(p => new LogRecord 
                 {
                     Id = p.Id,
@@ -33,6 +34,8 @@ public class LogRepository : IFrontolLog
                     Message = p.Action
                 })
                 .ToListAsync();
+
+            return await AttachPreviousMessages(errors);
         }
         catch (Exception  e)
         {
@@ -51,7 +54,7 @@ public class LogRepository : IFrontolLog
         
         try
         {
-            return await _dbContext.Logs.Where(p => p.Date > fromDate && (p.Category == "E" || p.Category == "D"))
+            var errors = await _dbContext.Logs.Where(p => p.Date > fromDate && (p.Category == "E" || p.Category == "D"))
                 .Select(p => new LogRecord 
                 {
                     Id = p.Id,
@@ -59,6 +62,8 @@ public class LogRepository : IFrontolLog
                     Message = p.Action
                 })
                 .ToListAsync();
+
+            return await AttachPreviousMessages(errors);
         }
         catch (Exception  e)
         {
@@ -66,5 +71,25 @@ public class LogRepository : IFrontolLog
             
             return [];
         }
+    }
+
+    private async Task<List<LogRecord>> AttachPreviousMessages(List<LogRecord> errors)
+    {
+        if (errors.Count == 0)
+            return errors;
+
+        var previousIds = errors.Select(error => error.Id - 1).ToList();
+        var previousById = await _dbContext.Logs!
+            .Where(log => previousIds.Contains(log.Id))
+            .Select(log => new { log.Id, log.Action })
+            .ToDictionaryAsync(log => log.Id, log => log.Action);
+
+        foreach (var error in errors)
+        {
+            previousById.TryGetValue(error.Id - 1, out var previousAction);
+            error.Message = FrontolLogMessage.WithPrevious(error.Message, previousAction);
+        }
+
+        return errors;
     }
 }

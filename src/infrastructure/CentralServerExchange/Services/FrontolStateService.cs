@@ -44,7 +44,10 @@ public class FrontolStateService
         {
             AgentToken = settings.CentralServerSettings.Token,
             
-            AgentInformation = AgentDataFactory.Current(InstalledDotNetRuntimes.ListFromWindows()),
+            AgentInformation = AgentDataFactory.Current(
+                InstalledDotNetRuntimes.ListFromWindows(),
+                settings.DatabaseConnection.DatabasePath,
+                settings.DatabaseConnection.LogDatabasePath),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),

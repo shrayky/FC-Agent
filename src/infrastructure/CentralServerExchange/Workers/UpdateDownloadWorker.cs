@@ -1,4 +1,5 @@
 using CentralServerExchange.Services;
+using Domain.Agent;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
 using Microsoft.Extensions.Hosting;
@@ -34,13 +35,25 @@ public class UpdateDownloadWorker : BackgroundService
 
             if (updateInfo.Need)
             {
-                _logger.LogWarning("Начинаю скачивать новую версию {version}", updateInfo.NewVersion);
-                
-                var settings = await _parametersService.Current();
-                
-                var address = $"{settings.CentralServerSettings.Address}/api/agentFiles/{updateInfo.UpdateId}/download";
-                
-                await _agentUpdateService.DownloadAndInstall(address, updateInfo.UpdateHash);
+                var windowsDisk = DriveMetricsReader.WindowsSystemDrive();
+                if (!UpdateDiskGuard.HasEnoughSpace(windowsDisk.FreeBytes))
+                {
+                    _logger.LogWarning(
+                        "Пропускаю скачивание обновления {version}: на диске Windows свободно {free} байт, нужно минимум {min}",
+                        updateInfo.NewVersion,
+                        windowsDisk.FreeBytes,
+                        UpdateDiskGuard.MinFreeBytes);
+                }
+                else
+                {
+                    _logger.LogWarning("Начинаю скачивать новую версию {version}", updateInfo.NewVersion);
+
+                    var settings = await _parametersService.Current();
+
+                    var address = $"{settings.CentralServerSettings.Address}/api/agentFiles/{updateInfo.UpdateId}/download";
+
+                    await _agentUpdateService.DownloadAndInstall(address, updateInfo.UpdateHash);
+                }
             }
             
 #if DEBUG
