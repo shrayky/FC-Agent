@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Interfaces;
+using FrontolDatabase.Entitys;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -84,9 +85,19 @@ public class MainDbRepository : IFrontolMainDb
                 .SingleOrDefaultAsync(s => s.Name == restartOption);
 
             if (setting is null)
-                return Result.Failure($"Настройка {restartOption} не найдена");
-
-            setting.Value = newVal.ToString();
+            {
+                setting = new Settings
+                {
+                    Id = newVal,
+                    Name = restartOption,
+                    Value = newVal.ToString()
+                };
+                _ctx.Settings.Add(setting);
+            }
+            else
+            {
+                setting.Value = newVal.ToString();
+            }
 
             await _ctx.SaveChangesAsync();
         
