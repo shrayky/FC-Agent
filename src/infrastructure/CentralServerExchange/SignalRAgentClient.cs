@@ -5,6 +5,7 @@ using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
+using Domain.Frontol.Models.DeferredReceipts;
 using Domain.Messages.Dto;
 using Domain.Messages.Enums;
 using DotNetHost;
@@ -71,6 +72,7 @@ public class SignalRAgentClient
         _connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
         _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
         _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
+        _connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
 
         _connection.Reconnecting += error =>
         {
@@ -226,6 +228,54 @@ public class SignalRAgentClient
         if (result.IsFailure)
             _logger.LogError(result.Error);
     }
+
+    private async Task OnDeferredReceiptsRequest(DeferredReceiptsRequest message)
+    {
+        _logger.LogInformation("Отложенные чеки: {Operation}", message.Operation);
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var receipts = scope.ServiceProvider.GetRequiredService<IFrontolDeferredReceipts>();
+
+        try
+        {
+            var command = await ExecuteDeferredOperation(receipts, message);
+            if (command.IsFailure)
+            {
+                _logger.LogError(command.Error);
+                await SendDeferredReceipts(message.Operation, Result.Failure<DeferredReceiptList>(command.Error));
+                return;
+            }
+
+            await SendDeferredReceipts(message.Operation, await receipts.List());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка команды отложенного чека");
+            await SendDeferredReceipts(message.Operation, Result.Failure<DeferredReceiptList>(ex.Message));
+        }
+    }
+
+    private static async Task<Result> ExecuteDeferredOperation(
+        IFrontolDeferredReceipts receipts,
+        DeferredReceiptsRequest message)
+    {
+        if (message.Operation == DeferredReceiptOperation.List)
+            return Result.Success();
+
+        if (message.Operation == DeferredReceiptOperation.Cancel)
+            return ToUnit(await receipts.Cancel(message.DocumentId));
+
+        if (message.Operation == DeferredReceiptOperation.Close)
+            return ToUnit(await receipts.Close(message.DocumentId, message.Payments));
+
+        if (message.Operation == DeferredReceiptOperation.AddPayment)
+            return ToUnit(await receipts.AddPayment(message.DocumentId, message.Payments));
+
+        return Result.Failure("Неизвестная операция с отложенным чеком");
+    }
+
+    private static Result ToUnit<T>(Result<T> result) =>
+        result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
     
     public async Task StopAsync()
     {
@@ -393,5 +443,52 @@ public class SignalRAgentClient
         }
 
         return Result.Success();
+    }
+
+    private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<DeferredReceiptList> result)
+    {
+        const string methodName = "DeferredReceipts";
+
+        if (!CanSend(out _))
+            return;
+
+        try
+        {
+            var message = new DeferredReceiptsResponse
+            {
+                AgentToken = _agentId,
+                Operation = operation,
+                Success = result.IsSuccess,
+                Error = result.IsFailure ? result.Error : string.Empty,
+                Receipts = result.IsSuccess ? result.Value.Receipts : [],
+                PaymentKinds = result.IsSuccess ? result.Value.PaymentKinds : [],
+                PrintGroups = result.IsSuccess ? result.Value.PrintGroups : []
+            };
+
+            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка отправки отложенных чеков");
+        }
+    }
+
+    private bool CanSend(out string error)
+    {
+        error = string.Empty;
+
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            error = "Невозможно отправить данные: соединение не установлено";
+            _logger.LogWarning(error);
+            return false;
+        }
+
+        if (_isRegistered)
+            return true;
+
+        error = "Агент не зарегистрирован";
+        _logger.LogWarning(error);
+        return false;
     }
 }

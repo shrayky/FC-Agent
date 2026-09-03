@@ -2,10 +2,13 @@
 
 namespace Domain.Messages.Dto;
 
-public record FrontolSettingsApplyingState
+public record FrontolSettingsApplyingState : Message
 {
-    public string AgentToken { get; set; } = string.Empty;
-    public MessageType MessageType { get; set; } = MessageType.FrontolSettingsApplying;
+    public FrontolSettingsApplyingState()
+    {
+        MessageType = MessageType.FrontolSettingsApplying;
+    }
+
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
 }

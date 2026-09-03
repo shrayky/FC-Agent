@@ -7,5 +7,6 @@ public enum MessageType
     FrontolLog,
     FrontolSettings,
     FrontolSettingsApplying,
-    PaySystemMode
+    PaySystemMode,
+    DeferredReceipts
 }

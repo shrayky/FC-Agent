@@ -1,14 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Frontol.Enums;
 
 namespace FrontolDatabase.Entitys;
 
-[Table("DOCUMENTS")]
+[Table("DOCUMENT")]
 public class Document
 {
     [Key]
     [Column("ID")]
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     [Column("DOCKINDID")]
     public int DocumentKindId { get; set; }
@@ -20,75 +21,71 @@ public class Document
     public DateTime OpenDate { get; set; }
 
     [Column("OPENTIME")]
-    public DateTime OpenTime {  get; set; }
+    public DateTime OpenTime { get; set; }
 
     [Column("OPENUSERID")]
     public int OpenUserId { get; set; }
 
     [Column("CLOSEDATE")]
-    public DateTime CloseDate {  get; set; }
+    public DateTime CloseDate { get; set; }
 
     [Column("CLOSETIME")]
     public DateTime CloseTime { get; set; }
 
-    //CloseUserID
+    [Column("CLOSEUSERID")]
+    public int CloseUserId { get; set; }
 
-    //DocumentID
+    [Column("DOCUMENTID")]
+    public long BaseDocumentId { get; set; }
 
-    //ClientID
+    [Column("CLIENTID")]
+    public int ClientId { get; set; }
 
-    //State
+    [Column("STATE")]
+    public DocumentStateEnum State { get; set; }
 
-    //Education
+    [Column("RMKID")]
+    public int RmkId { get; set; }
 
-    //RMKID
+    [Column("SUMM")]
+    public double Summ { get; set; }
 
-    //Summ
+    [Column("SUMMWD")]
+    public double SummWd { get; set; }
 
-    //SummWD
+    [Column("ECRSESSION")]
+    public int EcrSession { get; set; }
 
-    //ECRSession
+    [Column("CHEQUETYPE")]
+    public ReceiptTypeEnum ChequeType { get; set; }
 
-    //ChequeType
+    [Column("ORDERIDENTIF")]
+    public string OrderIdentif { get; set; } = string.Empty;
 
-    //OrderIdentif
+    [Column("OPENRMKID")]
+    public int OpenRmkId { get; set; }
 
-    //CommentCode
+    [Column("OPENSESSION")]
+    public int OpenSession { get; set; }
 
-    //AspectScheme
+    [Column("CHNG")]
+    public long ChangeCount { get; set; }
 
-    //AspectValue1
+    [Column("ISFISCAL")]
+    public int IsFiscal { get; set; }
 
-    //AspectValue2
+    [Column("EXTID")]
+    public string ExtId { get; set; } = string.Empty;
 
-    //AspectValue3
+    [Column("PRINTGROUPCODE")]
+    public int PrintGroupCode { get; set; }
 
-    //AspectValue4
+    [Column("LASTPAYMNUM")]
+    public int LastPaymNum { get; set; }
 
-    //AspectValue5
+    [Column("OWNERUSERID")]
+    public int OwnerUserId { get; set; }
 
-    //HallPlaceID
-
-    //Saved
-
-    //InnerDocOrder
-
-    //OpenRMKID
-
-
-    //OpenSession
-
-    //IsFiscal
-
-    //NShop
-
-    //UserValues
-
-    //EmployeeCode
-
-    //PrintGroupCode
-
-    //ExtID
-
-    //EnterpriseID
+    [Column("UUID")]
+    public string Uuid { get; set; } = string.Empty;
 }

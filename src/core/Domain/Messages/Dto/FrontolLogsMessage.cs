@@ -1,13 +1,14 @@
 using Domain.Frontol.Models;
 using Domain.Messages.Enums;
-using Domain.Messages.Interfaces;
 
 namespace Domain.Messages.Dto;
 
-public record FrontolLogsMessage: IMessage
+public record FrontolLogsMessage : Message
 {
-    public string AgentToken { get; set; } = string.Empty;
-    public MessageType MessageType { get; set; } = MessageType.FrontolLog;
-    public List<LogRecord> Logs { get; set; } = [];
+    public FrontolLogsMessage()
+    {
+        MessageType = MessageType.FrontolLog;
+    }
 
+    public List<LogRecord> Logs { get; set; } = [];
 }
