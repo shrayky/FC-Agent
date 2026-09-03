@@ -7,6 +7,8 @@ public interface IFrontolDeferredReceipts
 {
     Task<Result<DeferredReceiptList>> List();
 
+    Task<Result<int>> Count();
+
     Task<Result<DeferredReceipt>> Cancel(long documentId);
 
     Task<Result<DeferredReceipt>> Close(long documentId, IReadOnlyList<DeferredReceiptPaymentItem>? payments = null);

@@ -64,6 +64,30 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public async Task Count_считает_только_отложенные()
+    {
+        await SeedDeferredWithoutPayment();
+        await SeedDeferredWithPartialPayment();
+        await SeedClosedWithoutPrintGroup();
+
+        var result = await _repository.Count();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Count_без_отложенных_возвращает_0()
+    {
+        await SeedClosedWithoutPrintGroup();
+
+        var result = await _repository.Count();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value, Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task List_передаёт_группы_печати_с_именами()
     {
         await SeedWare(2, "Кофе");

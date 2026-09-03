@@ -64,6 +64,26 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         }
     }
 
+    public async Task<Result<int>> Count()
+    {
+        if (_ctx.Documents == null)
+            return Result.Failure<int>("Не удалось открыть Documents");
+
+        try
+        {
+            var count = await _ctx.Documents
+                .AsNoTracking()
+                .CountAsync(d => d.State == DocumentStateEnum.Deffered);
+
+            return Result.Success(count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка подсчёта отложенных чеков");
+            return Result.Failure<int>(ex.Message);
+        }
+    }
+
     public async Task<Result<DeferredReceipt>> Cancel(long documentId)
     {
         if (!TablesReady(out var error))

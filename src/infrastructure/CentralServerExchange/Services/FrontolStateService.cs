@@ -28,6 +28,7 @@ public class FrontolStateService
         var settings = await _parametersService.Current();
 
         var frontolVersion = string.Empty;
+        var deferredReceiptsCount = 0;
         
         if (!string.IsNullOrEmpty(settings.DatabaseConnection.DatabasePath))
         {
@@ -38,6 +39,11 @@ public class FrontolStateService
             
             if (version.IsSuccess) 
                 frontolVersion = version.Value;
+
+            var receipts = scope.ServiceProvider.GetRequiredService<IFrontolDeferredReceipts>();
+            var count = await receipts.Count();
+            if (count.IsSuccess)
+                deferredReceiptsCount = count.Value;
         }
         
         AgentStateResponse state = new()
@@ -51,6 +57,7 @@ public class FrontolStateService
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),
+            DeferredReceiptsCount = deferredReceiptsCount,
         };
         
         _logger.LogDebug(state.ToString());

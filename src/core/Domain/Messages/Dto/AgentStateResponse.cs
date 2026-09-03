@@ -14,4 +14,5 @@ public record AgentStateResponse : Message
     public AgentData AgentInformation { get; set; } = new();
     public string FrontolVersion { get; set; } = string.Empty;
     public List<LicenseInformation> Licenses { get; set; } = [];
+    public int DeferredReceiptsCount { get; set; }
 }
