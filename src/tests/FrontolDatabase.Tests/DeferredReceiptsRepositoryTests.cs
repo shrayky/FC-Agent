@@ -64,6 +64,21 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public async Task List_без_товарных_строк_не_запрашивает_справочник()
+    {
+        await SeedPayment(1, "Наличные");
+        _dbContext.Documents!.Add(Document(1801, 220, DocumentStateEnum.Deffered, 0, lastPaymNum: 0, printGroupCode: 0));
+        _dbContext.Transactions!.Add(Open(1802, 1801, 0, 0));
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Receipts.Single().Id, Is.EqualTo(1801));
+        Assert.That(result.Value.Receipts.Single().Positions, Is.Empty);
+    }
+
+    [Test]
     public async Task Count_считает_только_отложенные()
     {
         await SeedDeferredWithoutPayment();

@@ -371,10 +371,12 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .Distinct()
             .ToList();
 
-        var wares = await _ctx.Wares!
-            .AsNoTracking()
-            .Where(w => wareCodes.Contains(w.Code))
-            .ToListAsync();
+        var wares = wareCodes.Count == 0
+            ? []
+            : await _ctx.Wares!
+                .AsNoTracking()
+                .Where(w => wareCodes.Contains(w.Code))
+                .ToListAsync();
 
         var payments = await _ctx.Payments!
             .AsNoTracking()
