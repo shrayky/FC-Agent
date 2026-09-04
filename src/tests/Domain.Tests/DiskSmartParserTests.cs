@@ -92,6 +92,37 @@ public class DiskSmartParserTests
         Assert.That(facts.PowerOnDays, Is.Null);
     }
 
+    [Test]
+    public void KindFromAta_life_атрибут_это_ssd()
+    {
+        var smart = AtaSmart((Id: 0xE7, Current: 73, Raw: 0), (Id: 0x09, Current: 100, Raw: 45984));
+
+        Assert.That(DiskSmartParser.KindFromAta(smart), Is.EqualTo(DiskKind.Ssd));
+    }
+
+    [Test]
+    public void KindFromAta_без_life_это_hdd()
+    {
+        var smart = AtaSmart((Id: 0x05, Current: 100, Raw: 7), (Id: 0x09, Current: 100, Raw: 72));
+
+        Assert.That(DiskSmartParser.KindFromAta(smart), Is.EqualTo(DiskKind.Hdd));
+    }
+
+    [Test]
+    public void ModelFromAtaIdentify_байты_в_слове_переставлены()
+    {
+        var identify = new byte[512];
+        WriteAtaIdentifyModel(identify, "SAMSUNG SSD 860");
+
+        Assert.That(DiskSmartParser.ModelFromAtaIdentify(identify), Is.EqualTo("SAMSUNG SSD 860"));
+    }
+
+    [Test]
+    public void ModelFromAtaIdentify_короткий_буфер_пустая_строка()
+    {
+        Assert.That(DiskSmartParser.ModelFromAtaIdentify([1, 2, 3]), Is.Empty);
+    }
+
     private static byte[] AtaSmart(params (byte Id, byte Current, long Raw)[] attributes)
     {
         var buffer = new byte[512];
@@ -106,5 +137,15 @@ public class DiskSmartParserTests
         }
 
         return buffer;
+    }
+
+    private static void WriteAtaIdentifyModel(byte[] identify, string model)
+    {
+        var padded = model.PadRight(40);
+        for (var i = 0; i < 40; i += 2)
+        {
+            identify[54 + i] = (byte)padded[i + 1];
+            identify[54 + i + 1] = (byte)padded[i];
+        }
     }
 }

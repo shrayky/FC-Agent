@@ -99,6 +99,8 @@ public static class PhysicalDiskHealthReader
         var model = Model(descriptor);
         if (model.Length == 0)
             model = ReadNvmeModel(handle);
+        if (model.Length == 0)
+            model = ReadAtaModel(handle);
         if (model.Length > 0)
             disk.Name = model;
 
@@ -111,8 +113,12 @@ public static class PhysicalDiskHealthReader
         }
 
         var ata = ReadAtaSmart(handle);
-        if (ata is not null)
-            Apply(disk, DiskSmartParser.FromAta(ata, disk.Kind == DiskKind.Hdd ? DiskKind.Hdd : DiskKind.Ssd));
+        if (ata is null)
+            return;
+
+        if (disk.Kind.Length == 0)
+            disk.Kind = DiskSmartParser.KindFromAta(ata);
+        Apply(disk, DiskSmartParser.FromAta(ata, disk.Kind == DiskKind.Hdd ? DiskKind.Hdd : DiskKind.Ssd));
     }
 
     private static void Apply(PhysicalDiskHealth disk, DiskSmartFacts facts)
@@ -136,12 +142,13 @@ public static class PhysicalDiskHealthReader
         if (busType == Native.BusTypeNvme)
             return DiskKind.Nvme;
 
+        // DEVICE_*_DESCRIPTOR: Version+Size+BOOLEAN = 9, не 12.
         var seek = QueryProperty(handle, Native.StorageDeviceSeekPenaltyProperty, 32);
-        if (seek is { Length: >= 12 } && BitConverter.ToUInt32(seek, 4) >= 9)
+        if (seek is { Length: >= 9 })
             return seek[8] != 0 ? DiskKind.Hdd : DiskKind.Ssd;
 
         var trim = QueryProperty(handle, Native.StorageDeviceTrimProperty, 32);
-        if (trim is { Length: >= 12 } && trim[8] != 0)
+        if (trim is { Length: >= 9 } && trim[8] != 0)
             return DiskKind.Ssd;
 
         return string.Empty;
@@ -212,8 +219,17 @@ public static class PhysicalDiskHealthReader
                     0) || returned == 0 || returned > outputSize)
                 return null;
 
-            var result = new byte[returned];
-            Marshal.Copy(outPtr, result, 0, (int)returned);
+            var copy = (int)returned;
+            // Драйвер часто возвращает размер заголовка, строки модели лежат дальше по Size.
+            if (returned >= 8)
+            {
+                var declared = Marshal.ReadInt32(outPtr, 4);
+                if (declared > copy && declared <= outputSize)
+                    copy = declared;
+            }
+
+            var result = new byte[copy];
+            Marshal.Copy(outPtr, result, 0, copy);
             return result;
         }
         finally
@@ -331,30 +347,34 @@ public static class PhysicalDiskHealthReader
             0);
     }
 
-    private static byte[]? ReadAtaSmart(SafeFileHandle handle)
+    private static readonly byte[] AtaSmartTaskFile = [0xD0, 1, 1, 0x4F, 0xC2, 0xA0, 0xB0, 0];
+    private static readonly byte[] AtaIdentifyTaskFile = [0, 1, 0, 0, 0, 0xA0, 0xEC, 0];
+
+    private static string ReadAtaModel(SafeFileHandle handle)
     {
-        return ReadAtaSmartIoctl(handle) ?? ReadAtaPassThrough(handle);
+        var identify = ReadAtaSector(handle, AtaIdentifyTaskFile);
+        return identify is null ? string.Empty : DiskSmartParser.ModelFromAtaIdentify(identify);
     }
 
-    private static byte[]? ReadAtaSmartIoctl(SafeFileHandle handle)
+    private static byte[]? ReadAtaSmart(SafeFileHandle handle) =>
+        ReadAtaSector(handle, AtaSmartTaskFile);
+
+    private static byte[]? ReadAtaSector(SafeFileHandle handle, byte[] taskFile) =>
+        ReadAtaSmartIoctl(handle, taskFile) ?? ReadAtaPassThrough(handle, taskFile);
+
+    private static byte[]? ReadAtaSmartIoctl(SafeFileHandle handle, byte[] taskFile)
     {
         const int inSize = 32;
         const int outHeader = 16;
-        const int smartSize = 512;
+        const int sectorSize = 512;
         var inPtr = Marshal.AllocHGlobal(inSize);
-        var outPtr = Marshal.AllocHGlobal(outHeader + smartSize);
+        var outPtr = Marshal.AllocHGlobal(outHeader + sectorSize);
         try
         {
             Native.Zero(inPtr, inSize);
-            Native.Zero(outPtr, outHeader + smartSize);
-            Marshal.WriteInt32(inPtr, 0, smartSize);
-            Marshal.WriteByte(inPtr, 4, 0xD0);
-            Marshal.WriteByte(inPtr, 5, 1);
-            Marshal.WriteByte(inPtr, 6, 1);
-            Marshal.WriteByte(inPtr, 7, 0x4F);
-            Marshal.WriteByte(inPtr, 8, 0xC2);
-            Marshal.WriteByte(inPtr, 9, 0xA0);
-            Marshal.WriteByte(inPtr, 10, 0xB0);
+            Native.Zero(outPtr, outHeader + sectorSize);
+            Marshal.WriteInt32(inPtr, 0, sectorSize);
+            Marshal.Copy(taskFile, 0, inPtr + 4, taskFile.Length);
 
             if (!Native.DeviceIoControl(
                     handle,
@@ -362,7 +382,7 @@ public static class PhysicalDiskHealthReader
                     inPtr,
                     inSize,
                     outPtr,
-                    (uint)(outHeader + smartSize),
+                    (uint)(outHeader + sectorSize),
                     out _,
                     0))
                 return null;
@@ -370,9 +390,9 @@ public static class PhysicalDiskHealthReader
             if (Marshal.ReadByte(outPtr, 4) != 0)
                 return null;
 
-            var smart = new byte[smartSize];
-            Marshal.Copy(outPtr + outHeader, smart, 0, smartSize);
-            return smart;
+            var sector = new byte[sectorSize];
+            Marshal.Copy(outPtr + outHeader, sector, 0, sectorSize);
+            return sector;
         }
         finally
         {
@@ -381,7 +401,7 @@ public static class PhysicalDiskHealthReader
         }
     }
 
-    private static byte[]? ReadAtaPassThrough(SafeFileHandle handle)
+    private static byte[]? ReadAtaPassThrough(SafeFileHandle handle, byte[] taskFile)
     {
         var headerSize = Marshal.SizeOf<Native.AtaPassThroughEx>();
         var bufferSize = headerSize + 512;
@@ -397,7 +417,7 @@ public static class PhysicalDiskHealthReader
                 TimeOutValue = 10,
                 DataBufferOffset = (nuint)headerSize,
                 PreviousTaskFile = new byte[8],
-                CurrentTaskFile = [0xD0, 1, 1, 0x4F, 0xC2, 0xA0, 0xB0, 0]
+                CurrentTaskFile = [..taskFile]
             };
             Marshal.StructureToPtr(pass, buffer, false);
 
@@ -412,9 +432,9 @@ public static class PhysicalDiskHealthReader
                     0))
                 return null;
 
-            var smart = new byte[512];
-            Marshal.Copy(buffer + headerSize, smart, 0, 512);
-            return smart;
+            var sector = new byte[512];
+            Marshal.Copy(buffer + headerSize, sector, 0, 512);
+            return sector;
         }
         finally
         {

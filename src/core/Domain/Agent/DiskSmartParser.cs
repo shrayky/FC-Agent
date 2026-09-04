@@ -39,6 +39,27 @@ public static class DiskSmartParser
         return new DiskSmartFacts(SsdLife(attributes), null, days);
     }
 
+    public static string KindFromAta(ReadOnlySpan<byte> smart) =>
+        SsdLife(ReadAttributes(smart)) is not null ? DiskKind.Ssd : DiskKind.Hdd;
+
+    // ATA IDENTIFY: модель в словах 27–46, байты в слове переставлены.
+    public static string ModelFromAtaIdentify(ReadOnlySpan<byte> identify)
+    {
+        const int offset = 54;
+        const int length = 40;
+        if (identify.Length < offset + length)
+            return string.Empty;
+
+        var chars = new char[length];
+        for (var i = 0; i < length; i += 2)
+        {
+            chars[i] = (char)identify[offset + i + 1];
+            chars[i + 1] = (char)identify[offset + i];
+        }
+
+        return new string(chars).Trim('\0', ' ');
+    }
+
     private static int? HoursToDays(long? hours)
     {
         if (hours is null)
