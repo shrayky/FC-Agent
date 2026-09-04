@@ -132,7 +132,8 @@ public class SignalRAgentClient
             AgentInformation = AgentDataFactory.Current(
                 InstalledDotNetRuntimes.ListFromWindows(),
                 settings.DatabaseConnection.DatabasePath,
-                settings.DatabaseConnection.LogDatabasePath),
+                settings.DatabaseConnection.LogDatabasePath,
+                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath)),
         };
         
         try
@@ -347,7 +348,8 @@ public class SignalRAgentClient
             AgentInformation = AgentDataFactory.Current(
                 InstalledDotNetRuntimes.ListFromWindows(),
                 settings.DatabaseConnection.DatabasePath,
-                settings.DatabaseConnection.LogDatabasePath)
+                settings.DatabaseConnection.LogDatabasePath,
+                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath))
         };
         
         try

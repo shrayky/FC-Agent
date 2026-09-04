@@ -53,7 +53,8 @@ public class FrontolStateService
             AgentInformation = AgentDataFactory.Current(
                 InstalledDotNetRuntimes.ListFromWindows(),
                 settings.DatabaseConnection.DatabasePath,
-                settings.DatabaseConnection.LogDatabasePath),
+                settings.DatabaseConnection.LogDatabasePath,
+                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath)),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),

@@ -1,4 +1,5 @@
 using Domain.Agent;
+using Domain.Agent.Dto;
 using Domain.Configuration.Constants;
 
 namespace Domain.Tests;
@@ -6,11 +7,8 @@ namespace Domain.Tests;
 [TestFixture]
 public class AgentDataFactoryTests
 {
-    /// <summary>
-    /// В карточку агента попадают размеры дисков и файлов gdb.
-    /// </summary>
     [Test]
-    public void Current_заполняет_размеры_дисков_и_gdb()
+    public void Current_кладёт_диски_и_размеры_gdb()
     {
         var folder = Path.Combine(Path.GetTempPath(), $"fc-agent-gdb-{Guid.NewGuid():N}");
         Directory.CreateDirectory(folder);
@@ -19,25 +17,32 @@ public class AgentDataFactoryTests
         File.WriteAllBytes(mainPath, new byte[256]);
         File.WriteAllBytes(logPath, new byte[64]);
 
+        var disks = new List<PhysicalDiskHealth>
+        {
+            new()
+            {
+                Letter = "C",
+                Name = "SAMSUNG",
+                Kind = DiskKind.Ssd,
+                Size = 100,
+                FreeSpace = 40,
+                IsOs = true,
+                LifePercent = 98
+            }
+        };
+
         try
         {
-            var data = AgentDataFactory.Current(["Microsoft.AspNetCore.App/10.0.2"], mainPath, logPath);
-            var expectedDisk = DriveMetricsReader.FromPath(mainPath);
-            var windowsDisk = DriveMetricsReader.WindowsSystemDrive();
+            var data = AgentDataFactory.Current(["Microsoft.AspNetCore.App/10.0.2"], mainPath, logPath, disks);
 
             Assert.That(data.Version, Is.EqualTo(ApplicationInformation.Version));
-            Assert.That(data.WindowsDiskSize, Is.EqualTo(windowsDisk.TotalBytes));
-            Assert.That(data.WindowsDiskFreeSpace, Is.GreaterThan(0));
-            Assert.That(data.WindowsDiskFreeSpace, Is.LessThanOrEqualTo(data.WindowsDiskSize));
-            Assert.That(data.DatabaseDiskSize, Is.EqualTo(expectedDisk.TotalBytes));
-            Assert.That(data.DatabaseDiskFreeSpace, Is.GreaterThanOrEqualTo(0));
-            Assert.That(data.DatabaseDiskFreeSpace, Is.LessThanOrEqualTo(data.DatabaseDiskSize));
             Assert.That(data.MainGdbSize, Is.EqualTo(256));
             Assert.That(data.LogGdbSize, Is.EqualTo(64));
-            Assert.That(data.WindowsDiskLetter, Is.EqualTo(windowsDisk.Letter));
-            Assert.That(data.WindowsDiskName, Is.EqualTo(windowsDisk.Name));
-            Assert.That(data.DatabaseDiskLetter, Is.EqualTo(expectedDisk.Letter));
-            Assert.That(data.DatabaseDiskName, Is.EqualTo(expectedDisk.Name));
+            Assert.That(data.Disks, Has.Count.EqualTo(1));
+            Assert.That(data.Disks[0].Letter, Is.EqualTo("C"));
+            Assert.That(data.Disks[0].Name, Is.EqualTo("SAMSUNG"));
+            Assert.That(data.Disks[0].IsOs, Is.True);
+            Assert.That(data.Disks[0].LifePercent, Is.EqualTo(98));
         }
         finally
         {

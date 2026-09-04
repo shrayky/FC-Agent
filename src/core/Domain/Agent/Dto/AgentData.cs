@@ -9,14 +9,7 @@ public class AgentData
     public string HostName { get; set; } = string.Empty;
     public List<string> IpAddresses { get; set; } = [];
     public List<string> InstalledRuntimes { get; set; } = [];
-    public long WindowsDiskSize { get; set; }
-    public long WindowsDiskFreeSpace { get; set; }
-    public string WindowsDiskLetter { get; set; } = string.Empty;
-    public string WindowsDiskName { get; set; } = string.Empty;
-    public long DatabaseDiskSize { get; set; }
-    public long DatabaseDiskFreeSpace { get; set; }
-    public string DatabaseDiskLetter { get; set; } = string.Empty;
-    public string DatabaseDiskName { get; set; } = string.Empty;
+    public List<PhysicalDiskHealth> Disks { get; set; } = [];
     public long MainGdbSize { get; set; }
     public long LogGdbSize { get; set; }
 }
