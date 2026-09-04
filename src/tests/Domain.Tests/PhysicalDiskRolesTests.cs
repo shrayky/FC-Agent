@@ -7,38 +7,43 @@ namespace Domain.Tests;
 public class PhysicalDiskRolesTests
 {
     [Test]
-    public void Apply_ставит_флаги_по_буквам_томов()
+    public void Apply_ставит_флаги_на_каждый_раздел()
     {
-        var disk = new PhysicalDiskHealth { Letter = "C" };
+        var partitions = new List<DiskPartition>
+        {
+            new() { Letter = "c", Name = "System" },
+            new() { Letter = "d", Name = "DATA" }
+        };
 
-        PhysicalDiskRoles.Apply(disk, ["C", "D"], osLetter: "C", dbLetter: "D");
+        PhysicalDiskRoles.Apply(partitions, osLetter: "C", dbLetter: "D");
 
-        Assert.That(disk.IsOs, Is.True);
-        Assert.That(disk.IsDatabase, Is.True);
-        Assert.That(disk.Letter, Is.EqualTo("C"));
+        Assert.That(partitions[0].Letter, Is.EqualTo("C"));
+        Assert.That(partitions[0].IsOs, Is.True);
+        Assert.That(partitions[0].IsDatabase, Is.False);
+        Assert.That(partitions[1].Letter, Is.EqualTo("D"));
+        Assert.That(partitions[1].IsOs, Is.False);
+        Assert.That(partitions[1].IsDatabase, Is.True);
     }
 
     [Test]
-    public void Apply_буква_ос_важнее_остальных()
+    public void Apply_бд_и_ос_на_одном_разделе()
     {
-        var disk = new PhysicalDiskHealth();
+        var partitions = new List<DiskPartition> { new() { Letter = "C" } };
 
-        PhysicalDiskRoles.Apply(disk, ["D", "C"], osLetter: "C", dbLetter: "E");
+        PhysicalDiskRoles.Apply(partitions, osLetter: "C", dbLetter: "C");
 
-        Assert.That(disk.Letter, Is.EqualTo("C"));
-        Assert.That(disk.IsOs, Is.True);
-        Assert.That(disk.IsDatabase, Is.False);
+        Assert.That(partitions[0].IsOs, Is.True);
+        Assert.That(partitions[0].IsDatabase, Is.True);
     }
 
     [Test]
-    public void Apply_буква_бд_если_ос_на_другом_диске()
+    public void Apply_пустая_буква_бд_не_ставит_флаг()
     {
-        var disk = new PhysicalDiskHealth();
+        var partitions = new List<DiskPartition> { new() { Letter = "C" } };
 
-        PhysicalDiskRoles.Apply(disk, ["E", "D"], osLetter: "C", dbLetter: "D");
+        PhysicalDiskRoles.Apply(partitions, osLetter: "C", dbLetter: "");
 
-        Assert.That(disk.Letter, Is.EqualTo("D"));
-        Assert.That(disk.IsOs, Is.False);
-        Assert.That(disk.IsDatabase, Is.True);
+        Assert.That(partitions[0].IsOs, Is.True);
+        Assert.That(partitions[0].IsDatabase, Is.False);
     }
 }

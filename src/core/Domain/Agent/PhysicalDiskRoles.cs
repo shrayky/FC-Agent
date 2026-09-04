@@ -5,34 +5,20 @@ namespace Domain.Agent;
 public static class PhysicalDiskRoles
 {
     public static void Apply(
-        PhysicalDiskHealth disk,
-        IReadOnlyList<string> volumeLetters,
+        IReadOnlyList<DiskPartition> partitions,
         string osLetter,
         string dbLetter)
     {
-        var letters = volumeLetters
-            .Select(Normalize)
-            .Where(letter => letter.Length > 0)
-            .Distinct()
-            .ToList();
-
         var os = Normalize(osLetter);
         var db = Normalize(dbLetter);
 
-        disk.IsOs = os.Length > 0 && letters.Contains(os);
-        disk.IsDatabase = db.Length > 0 && letters.Contains(db);
-        disk.Letter = Prefer(letters, os, db);
-    }
-
-    private static string Prefer(IReadOnlyList<string> letters, string os, string db)
-    {
-        if (os.Length > 0 && letters.Contains(os))
-            return os;
-
-        if (db.Length > 0 && letters.Contains(db))
-            return db;
-
-        return letters.Count > 0 ? letters[0] : string.Empty;
+        foreach (var partition in partitions)
+        {
+            var letter = Normalize(partition.Letter);
+            partition.Letter = letter;
+            partition.IsOs = os.Length > 0 && letter == os;
+            partition.IsDatabase = db.Length > 0 && letter == db;
+        }
     }
 
     private static string Normalize(string letter)

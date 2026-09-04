@@ -21,13 +21,20 @@ public class AgentDataFactoryTests
         {
             new()
             {
-                Letter = "C",
                 Name = "SAMSUNG",
                 Kind = DiskKind.Ssd,
-                Size = 100,
-                FreeSpace = 40,
-                IsOs = true,
-                LifePercent = 98
+                LifePercent = 98,
+                Partitions =
+                [
+                    new DiskPartition
+                    {
+                        Letter = "C",
+                        Name = "System",
+                        Size = 100,
+                        FreeSpace = 40,
+                        IsOs = true
+                    }
+                ]
             }
         };
 
@@ -39,10 +46,11 @@ public class AgentDataFactoryTests
             Assert.That(data.MainGdbSize, Is.EqualTo(256));
             Assert.That(data.LogGdbSize, Is.EqualTo(64));
             Assert.That(data.Disks, Has.Count.EqualTo(1));
-            Assert.That(data.Disks[0].Letter, Is.EqualTo("C"));
             Assert.That(data.Disks[0].Name, Is.EqualTo("SAMSUNG"));
-            Assert.That(data.Disks[0].IsOs, Is.True);
             Assert.That(data.Disks[0].LifePercent, Is.EqualTo(98));
+            Assert.That(data.Disks[0].Partitions, Has.Count.EqualTo(1));
+            Assert.That(data.Disks[0].Partitions[0].Letter, Is.EqualTo("C"));
+            Assert.That(data.Disks[0].Partitions[0].IsOs, Is.True);
         }
         finally
         {

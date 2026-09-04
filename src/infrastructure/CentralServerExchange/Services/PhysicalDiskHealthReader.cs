@@ -31,32 +31,21 @@ public static class PhysicalDiskHealthReader
         var volumesByDevice = VolumesByDevice();
         var disks = new List<PhysicalDiskHealth>();
 
-        // DriveInfo не видит диск без буквы; SMART читаем с PhysicalDrive0..31.
+        // Только диски с томами: без буквы на сервер не уходит.
         for (var deviceNumber = 0; deviceNumber < 32; deviceNumber++)
         {
-            using var handle = Native.OpenPhysicalDrive(deviceNumber);
-            if (handle.IsInvalid)
+            if (!volumesByDevice.TryGetValue(deviceNumber, out var volumes) || volumes.Count == 0)
                 continue;
 
-            var disk = new PhysicalDiskHealth();
-            FillSmart(disk, handle);
-
-            if (volumesByDevice.TryGetValue(deviceNumber, out var volumes))
+            var disk = new PhysicalDiskHealth
             {
-                PhysicalDiskRoles.Apply(disk, volumes.Select(v => v.Letter).ToList(), osLetter, dbLetter);
-                var selected = volumes.FirstOrDefault(v => v.Letter == disk.Letter);
-                if (selected.Letter.Length == 0)
-                    selected = volumes[0];
+                Partitions = volumes.Select(ToPartition).ToList()
+            };
+            PhysicalDiskRoles.Apply(disk.Partitions, osLetter, dbLetter);
 
-                disk.Size = selected.TotalBytes;
-                disk.FreeSpace = selected.FreeBytes;
-                if (string.IsNullOrWhiteSpace(disk.Name))
-                    disk.Name = selected.Name;
-            }
-            else if (disk.Size == 0)
-            {
-                disk.Size = DiskLength(handle);
-            }
+            using var handle = Native.OpenPhysicalDrive(deviceNumber);
+            if (!handle.IsInvalid)
+                FillSmart(disk, handle);
 
             disks.Add(disk);
         }
@@ -92,6 +81,15 @@ public static class PhysicalDiskHealthReader
 
         return groups;
     }
+
+    private static DiskPartition ToPartition(DriveMetrics volume) =>
+        new()
+        {
+            Letter = volume.Letter,
+            Name = volume.Name,
+            Size = volume.TotalBytes,
+            FreeSpace = volume.FreeBytes
+        };
 
     private static void FillSmart(PhysicalDiskHealth disk, SafeFileHandle handle)
     {
@@ -185,35 +183,6 @@ public static class PhysicalDiskHealthReader
                 return -1;
 
             return Marshal.PtrToStructure<Native.StorageDeviceNumber>(buffer).DeviceNumber;
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(buffer);
-        }
-    }
-
-    private static long DiskLength(SafeFileHandle handle)
-    {
-        var length = ReadInt64Ioctl(handle, Native.IoctlDiskGetLengthInfo, 8, 0);
-        if (length > 0)
-            return length;
-
-        return ReadInt64Ioctl(handle, Native.IoctlDiskGetDriveGeometryEx, 40, 24);
-    }
-
-    private static long ReadInt64Ioctl(SafeFileHandle handle, uint ioctl, int bufferSize, int offset)
-    {
-        var buffer = Marshal.AllocHGlobal(bufferSize);
-        try
-        {
-            Native.Zero(buffer, bufferSize);
-            if (!Native.DeviceIoControl(handle, ioctl, 0, 0, buffer, (uint)bufferSize, out var returned, 0))
-                return 0;
-
-            if (returned < offset + 8)
-                return 0;
-
-            return Marshal.ReadInt64(buffer, offset);
         }
         finally
         {
@@ -464,8 +433,6 @@ public static class PhysicalDiskHealthReader
         public const uint IoctlStorageQueryProperty = 0x2D1400;
         public const uint SmartRcvDriveData = 0x0007C088;
         public const uint IoctlAtaPassThrough = 0x0004D02C;
-        public const uint IoctlDiskGetLengthInfo = 0x0007405C;
-        public const uint IoctlDiskGetDriveGeometryEx = 0x000700A0;
         public const int StorageDeviceProperty = 0;
         public const int StorageDeviceSeekPenaltyProperty = 7;
         public const int StorageDeviceTrimProperty = 8;
