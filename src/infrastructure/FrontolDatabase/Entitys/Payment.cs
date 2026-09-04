@@ -24,14 +24,14 @@ public class Payment
     public int Deleted { get; set; }
 
     [Column("PRINTGROUPID")]
-    public int PrintGroupId { get; set; }
+    public int? PrintGroupId { get; set; }
 
     [Column("ISFISCALPAYMENT")]
-    public int IsFiscalPayment { get; set; }
+    public int? IsFiscalPayment { get; set; }
 
     [Column("FISCALOPERATION")]
-    public int FiscalOperation { get; set; }
+    public int? FiscalOperation { get; set; }
 
     [Column("ECRPAYMENT")]
-    public int EcrPayment { get; set; }
+    public int? EcrPayment { get; set; }
 }

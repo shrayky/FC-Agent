@@ -102,6 +102,22 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public async Task List_читает_оплату_с_пустыми_необязательными_полями()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedPayment(1, "Наличные", printGroupId: null, isFiscal: null, fiscalOperation: null, ecrPayment: null);
+        await SeedDeferredWithoutPayment();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var kind = result.Value.PaymentKinds.Single();
+        Assert.That(kind.Code, Is.EqualTo(1));
+        Assert.That(kind.PrintGroupId, Is.EqualTo(0));
+        Assert.That(kind.PrintGroupCode, Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task List_подставляет_имя_из_SprT()
     {
         await SeedWare(2, "Кофе");
@@ -336,7 +352,13 @@ public class DeferredReceiptsRepositoryTests
         }
     ];
 
-    private async Task SeedPayment(int code, string name)
+    private async Task SeedPayment(
+        int code,
+        string name,
+        int? printGroupId = 0,
+        int? isFiscal = 1,
+        int? fiscalOperation = 0,
+        int? ecrPayment = 0)
     {
         _dbContext.Payments!.Add(new Payment
         {
@@ -344,7 +366,10 @@ public class DeferredReceiptsRepositoryTests
             Code = code,
             Name = name,
             Operation = PaymentOperationEnum.Cash,
-            IsFiscalPayment = 1,
+            PrintGroupId = printGroupId,
+            IsFiscalPayment = isFiscal,
+            FiscalOperation = fiscalOperation,
+            EcrPayment = ecrPayment,
             Deleted = 0
         });
         await _dbContext.SaveChangesAsync();

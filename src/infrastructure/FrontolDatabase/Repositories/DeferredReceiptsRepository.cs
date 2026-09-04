@@ -423,8 +423,8 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             Code = p.Code,
             Name = p.Name,
             Operation = p.Operation,
-            PrintGroupId = p.PrintGroupId,
-            PrintGroupCode = printGroups.FirstOrDefault(g => g.Id == p.PrintGroupId)?.Code ?? 0
+            PrintGroupId = p.PrintGroupId ?? 0,
+            PrintGroupCode = printGroups.FirstOrDefault(g => g.Id == (p.PrintGroupId ?? 0))?.Code ?? 0
         }).ToList();
     }
 
@@ -458,7 +458,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             Currency = DefaultCurrency,
             PosNumb = posNumb,
             CommentCode = PaymentCommentCode,
-            CountFills = payment.IsFiscalPayment,
+            CountFills = payment.IsFiscalPayment ?? 0,
             OrderPos = (int)payment.Operation,
             TrmkId = document.RmkId,
             PrintGroupClose = printGroupClose,
@@ -568,7 +568,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         int printGroupCode,
         List<PrintGroupInfo> groups)
     {
-        if (kind.PrintGroupId == 0)
+        if ((kind.PrintGroupId ?? 0) == 0)
             return true;
 
         var kindCode = groups.FirstOrDefault(g => g.Id == kind.PrintGroupId)?.Code ?? 0;
