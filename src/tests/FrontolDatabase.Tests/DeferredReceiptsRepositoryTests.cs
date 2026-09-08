@@ -166,6 +166,67 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public async Task List_исключает_позицию_сторнированную_транзакцией_12()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedWare(3, "Чай");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithFullStorno();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var receipt = result.Value.Receipts.Single();
+        Assert.That(receipt.Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
+        Assert.That(receipt.Positions.Single().Quantity, Is.EqualTo(1).Within(0.001));
+        Assert.That(receipt.Positions.Single().Summ, Is.EqualTo(98.13).Within(0.001));
+    }
+
+    [Test]
+    public async Task List_связывает_сторно_12_по_PosNumb_если_PosId_пустой()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedWare(3, "Чай");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithFullStorno(stornoPosId: 0);
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Receipts.Single().Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
+    }
+
+    [Test]
+    public async Task List_исключает_сторно_12_с_отрицательным_количеством()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedWare(3, "Чай");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithFullStorno(stornoQuantity: -1);
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Receipts.Single().Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
+    }
+
+    [Test]
+    public async Task List_уменьшает_количество_при_частичном_сторно_12()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithPartialStorno();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var position = result.Value.Receipts.Single().Positions.Single();
+        Assert.That(position.WareCode, Is.EqualTo(2));
+        Assert.That(position.Quantity, Is.EqualTo(2).Within(0.001));
+        Assert.That(position.Summ, Is.EqualTo(196.26).Within(0.001));
+    }
+
+    [Test]
     public async Task Cancel_меняет_статус_и_пишет_транзакцию_56()
     {
         await SeedWare(2, "Кофе");
@@ -411,6 +472,27 @@ public class DeferredReceiptsRepositoryTests
         await _dbContext.SaveChangesAsync();
     }
 
+    private async Task SeedDeferredWithFullStorno(int stornoPosId = 2, double stornoQuantity = 1)
+    {
+        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 98.13, lastPaymNum: 0, printGroupCode: 1));
+        _dbContext.Transactions!.AddRange(
+            Open(1747, 1746, 1, 98.13),
+            Ware(1748, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1),
+            Ware(1750, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1),
+            Storno(1751, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1, quantity: stornoQuantity, posId: stornoPosId));
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task SeedDeferredWithPartialStorno()
+    {
+        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 294.39, lastPaymNum: 0, printGroupCode: 1));
+        _dbContext.Transactions!.AddRange(
+            Open(1747, 1746, 2, 196.26),
+            Ware(1748, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1, quantity: 3),
+            Storno(1751, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1, quantity: 1));
+        await _dbContext.SaveChangesAsync();
+    }
+
     private async Task SeedClosedWithoutPrintGroup()
     {
         _dbContext.Documents!.Add(Document(1787, 215, DocumentStateEnum.Closed, 153.54, lastPaymNum: 2, printGroupCode: 0));
@@ -452,17 +534,41 @@ public class DeferredReceiptsRepositoryTests
     private static TranzT Open(long id, long documentId, double quantity, double summ) =>
         Base(id, documentId, TranzTypeEnum.OpenDocument, quantity, summ);
 
-    private static TranzT Ware(long id, long documentId, int wareCode, int pos, double price, int printGroupClose)
+    private static TranzT Ware(
+        long id,
+        long documentId,
+        int wareCode,
+        int pos,
+        double price,
+        int printGroupClose,
+        double quantity = 1)
     {
-        var row = Base(id, documentId, TranzTypeEnum.WareFromCatalog, 1, price);
+        var summ = price * quantity;
+        var row = Base(id, documentId, TranzTypeEnum.WareFromCatalog, quantity, summ);
         row.WareCode = wareCode;
         row.Price = price;
         row.PriceWd = price;
-        row.SummWd = price;
+        row.SummWd = summ;
         row.PosId = pos;
         row.PosNumb = pos;
         row.OrderPos = 1;
         row.PrintGroupClose = printGroupClose;
+        return row;
+    }
+
+    private static TranzT Storno(
+        long id,
+        long documentId,
+        int wareCode,
+        int pos,
+        double price,
+        int printGroupClose,
+        double quantity = 1,
+        int? posId = null)
+    {
+        var row = Ware(id, documentId, wareCode, pos, price, printGroupClose, quantity);
+        row.TranzType = TranzTypeEnum.StornoFromCatalog;
+        row.PosId = posId ?? pos;
         return row;
     }
 

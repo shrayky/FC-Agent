@@ -394,7 +394,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             PaidSumm = paid,
             RemainSumm = Math.Max(0, document.SummWd - paid),
             HasPrintGroup = HasPrintGroup(document, transactions),
-            Positions = MapPositions(transactions, wares),
+            Positions = MapPositions(NetWares(transactions), wares),
             Payments = MapPayments(transactions, payments)
         });
     }
@@ -494,34 +494,23 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             PrintGroupClose = printGroupClose
         };
 
-    private static List<DeferredReceiptPosition> MapPositions(List<TranzT> transactions, List<SprT> wares)
+    private static List<DeferredReceiptPosition> MapPositions(IReadOnlyList<NetWare> remaining, List<SprT> wares)
     {
-        var added = transactions.Where(IsWare).ToList();
-        var storno = transactions.Where(IsStorno).ToList();
-
         var positions = new List<DeferredReceiptPosition>();
-        foreach (var ware in added)
+        foreach (var ware in remaining)
         {
-            var cancelled = storno
-                .Where(s => s.PosId == ware.PosId && s.WareCode == ware.WareCode)
-                .Sum(s => s.Quantity);
-
-            var quantity = ware.Quantity - cancelled;
-            if (quantity <= 0)
-                continue;
-
-            var catalog = wares.FirstOrDefault(w => w.Code == ware.WareCode);
+            var catalog = wares.FirstOrDefault(w => w.Code == ware.Source.WareCode);
             positions.Add(new DeferredReceiptPosition
             {
-                WareCode = ware.WareCode,
-                Name = catalog?.Name ?? ware.WareMark,
-                Mark = string.IsNullOrEmpty(ware.WareMark) ? catalog?.Mark ?? string.Empty : ware.WareMark,
-                Barcode = ware.Barcode,
-                Quantity = quantity,
-                Price = ware.Price,
-                Summ = ware.Summ * (quantity / ware.Quantity),
+                WareCode = ware.Source.WareCode,
+                Name = catalog?.Name ?? ware.Source.WareMark,
+                Mark = string.IsNullOrEmpty(ware.Source.WareMark) ? catalog?.Mark ?? string.Empty : ware.Source.WareMark,
+                Barcode = ware.Source.Barcode,
+                Quantity = ware.Quantity,
+                Price = ware.Source.Price,
+                Summ = ware.Summ,
                 WareType = catalog?.WareType ?? 0,
-                PrintGroupCode = ware.PrintGroupClose
+                PrintGroupCode = ware.Source.PrintGroupClose
             });
         }
 
@@ -554,6 +543,41 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
 
     private static bool IsStorno(TranzT transaction) =>
         transaction.TranzType is TranzTypeEnum.StornoFromCatalog or TranzTypeEnum.StornoFreePrice;
+
+    private sealed record NetWare(TranzT Source, double Quantity, double Summ, double SummWd);
+
+    // Frontol: 12/2 сторнирует 11/1. PosId — ID позиции; если 0, берём PosNumb.
+    private static int PositionKey(TranzT transaction) =>
+        transaction.PosId != 0 ? transaction.PosId : transaction.PosNumb;
+
+    private static List<NetWare> NetWares(IReadOnlyList<TranzT> transactions)
+    {
+        var cancelledByKey = transactions
+            .Where(IsStorno)
+            .GroupBy(PositionKey)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(s => Math.Abs(s.Quantity)));
+
+        var remaining = new List<NetWare>();
+        foreach (var group in transactions.Where(IsWare).GroupBy(PositionKey))
+        {
+            cancelledByKey.TryGetValue(group.Key, out var cancelled);
+            var quantity = group.Sum(t => t.Quantity) - cancelled;
+            if (quantity <= 0.000001)
+                continue;
+
+            var source = group.MaxBy(t => t.Id) ?? group.Last();
+            var sourceQty = group.Sum(t => t.Quantity);
+            remaining.Add(new NetWare(
+                source,
+                quantity,
+                group.Sum(t => t.Summ) * (quantity / sourceQty),
+                group.Sum(t => t.SummWd) * (quantity / sourceQty)));
+        }
+
+        return remaining;
+    }
 
     private static bool HasPrintGroup(Document document, IEnumerable<TranzT> transactions) =>
         WarePrintGroupCodes(transactions).Count > 0;
