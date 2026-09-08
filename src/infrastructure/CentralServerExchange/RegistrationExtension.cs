@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using CentralServerExchange.Services;
 using CentralServerExchange.Workers;
+using Domain.Agent.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CentralServerExchange
@@ -31,6 +32,7 @@ namespace CentralServerExchange
             services.AddSingleton<AgentUpdateService>();
             services.AddSingleton<FrontolLogsService>();
             services.AddSingleton<FrontolSettingsService>();
+            services.AddSingleton<IFcRemoteProcessSource, WindowsFcRemoteProcessSource>();
             
             services.AddSingleton<SignalRAgentClient>();
             

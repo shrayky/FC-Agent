@@ -8,5 +8,6 @@ public enum MessageType
     FrontolSettings,
     FrontolSettingsApplying,
     PaySystemMode,
-    DeferredReceipts
+    DeferredReceipts,
+    RestartRemote
 }

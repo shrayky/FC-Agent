@@ -1,6 +1,7 @@
 using CentralServerExchange.Services;
 using CSharpFunctionalExtensions;
 using Domain.Agent;
+using Domain.Agent.Interfaces;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
 using Domain.Frontol.Interfaces;
@@ -73,6 +74,7 @@ public class SignalRAgentClient
         _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
         _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
         _connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
+        _connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
 
         _connection.Reconnecting += error =>
         {
@@ -228,6 +230,25 @@ public class SignalRAgentClient
 
         if (result.IsFailure)
             _logger.LogError(result.Error);
+    }
+
+    private Task OnRestartRemote(RestartRemoteRequest message)
+    {
+        try
+        {
+            _logger.LogWarning("Получена команда рестарта fc-remote");
+            using var scope = _serviceScopeFactory.CreateScope();
+            var restarter = scope.ServiceProvider.GetRequiredService<IFcRemoteRestarter>();
+            var result = restarter.Restart();
+            if (result.IsFailure)
+                _logger.LogError(result.Error);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка рестарта fc-remote");
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task OnDeferredReceiptsRequest(DeferredReceiptsRequest message)
