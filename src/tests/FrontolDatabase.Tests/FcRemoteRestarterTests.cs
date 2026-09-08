@@ -1,5 +1,6 @@
 using Application.Agent;
 using Domain.Agent.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace FrontolDatabase.Tests;
@@ -12,7 +13,7 @@ public class FcRemoteRestarterTests
     {
         var source = new Mock<IFcRemoteProcessSource>();
         source.Setup(s => s.ListByName("fc-remote")).Returns([]);
-        var sut = new FcRemoteRestarter(source.Object);
+        var sut = new FcRemoteRestarter(source.Object, NullLogger<FcRemoteRestarter>.Instance);
 
         var result = sut.Restart();
 
@@ -26,7 +27,7 @@ public class FcRemoteRestarterTests
         var p2 = new Mock<IFcRemoteProcess>();
         var source = new Mock<IFcRemoteProcessSource>();
         source.Setup(s => s.ListByName("fc-remote")).Returns([p1.Object, p2.Object]);
-        var sut = new FcRemoteRestarter(source.Object);
+        var sut = new FcRemoteRestarter(source.Object, NullLogger<FcRemoteRestarter>.Instance);
 
         var result = sut.Restart();
 
@@ -42,7 +43,7 @@ public class FcRemoteRestarterTests
         process.Setup(p => p.Kill()).Throws(new InvalidOperationException("нет доступа"));
         var source = new Mock<IFcRemoteProcessSource>();
         source.Setup(s => s.ListByName("fc-remote")).Returns([process.Object]);
-        var sut = new FcRemoteRestarter(source.Object);
+        var sut = new FcRemoteRestarter(source.Object, NullLogger<FcRemoteRestarter>.Instance);
 
         var result = sut.Restart();
 

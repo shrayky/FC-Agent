@@ -18,8 +18,14 @@ public class WindowsFcRemoteProcessSource : IFcRemoteProcessSource
 
         public void Kill()
         {
-            process.Kill();
-            process.Dispose();
+            try
+            {
+                process.Kill();
+            }
+            finally
+            {
+                process.Dispose();
+            }
         }
     }
 }
