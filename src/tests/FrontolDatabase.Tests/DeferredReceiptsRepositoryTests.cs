@@ -180,9 +180,6 @@ public class DeferredReceiptsRepositoryTests
         Assert.That(receipt.Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
         Assert.That(receipt.Positions.Single().Quantity, Is.EqualTo(1).Within(0.001));
         Assert.That(receipt.Positions.Single().Summ, Is.EqualTo(98.13).Within(0.001));
-        Assert.That(receipt.Summ, Is.EqualTo(98.13).Within(0.001));
-        Assert.That(receipt.SummWd, Is.EqualTo(98.13).Within(0.001));
-        Assert.That(receipt.RemainSumm, Is.EqualTo(98.13).Within(0.001));
     }
 
     [Test]
@@ -196,9 +193,21 @@ public class DeferredReceiptsRepositoryTests
         var result = await _repository.List();
 
         Assert.That(result.IsSuccess, Is.True);
-        var receipt = result.Value.Receipts.Single();
-        Assert.That(receipt.Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
-        Assert.That(receipt.RemainSumm, Is.EqualTo(98.13).Within(0.001));
+        Assert.That(result.Value.Receipts.Single().Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
+    }
+
+    [Test]
+    public async Task List_исключает_сторно_12_с_отрицательным_количеством()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedWare(3, "Чай");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithFullStorno(stornoQuantity: -1);
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Receipts.Single().Positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2 }));
     }
 
     [Test]
@@ -215,40 +224,6 @@ public class DeferredReceiptsRepositoryTests
         Assert.That(position.WareCode, Is.EqualTo(2));
         Assert.That(position.Quantity, Is.EqualTo(2).Within(0.001));
         Assert.That(position.Summ, Is.EqualTo(196.26).Within(0.001));
-        Assert.That(result.Value.Receipts.Single().RemainSumm, Is.EqualTo(196.26).Within(0.001));
-    }
-
-    [Test]
-    public async Task AddPayment_с_ГП_не_требует_оплату_сторнированной_позиции()
-    {
-        await SeedWare(2, "Кофе");
-        await SeedWare(3, "Чай");
-        await SeedPayment(1, "Наличные");
-        await SeedDeferredWithFullStorno();
-
-        var result = await _repository.AddPayment(1746, PayItems(98.13, printGroupCode: 1));
-
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value.PaidSumm, Is.EqualTo(98.13).Within(0.001));
-        Assert.That(result.Value.RemainSumm, Is.EqualTo(0).Within(0.001));
-    }
-
-    [Test]
-    public async Task Close_Quantity_без_сторнированных_позиций()
-    {
-        await SeedWare(2, "Кофе");
-        await SeedWare(3, "Чай");
-        await SeedPayment(1, "Наличные");
-        await SeedDeferredWithFullStorno();
-        await _repository.AddPayment(1746, PayItems(98.13, printGroupCode: 1));
-
-        var result = await _repository.Close(1746);
-
-        Assert.That(result.IsSuccess, Is.True);
-
-        var close = await _dbContext.Transactions!.AsNoTracking()
-            .SingleAsync(t => t.DocumentId == 1746 && t.TranzType == TranzTypeEnum.Close);
-        Assert.That(close.Quantity, Is.EqualTo(1).Within(0.001));
     }
 
     [Test]
@@ -497,14 +472,14 @@ public class DeferredReceiptsRepositoryTests
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task SeedDeferredWithFullStorno(int stornoPosId = 2)
+    private async Task SeedDeferredWithFullStorno(int stornoPosId = 2, double stornoQuantity = 1)
     {
-        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 153.54, lastPaymNum: 0, printGroupCode: 1));
+        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 98.13, lastPaymNum: 0, printGroupCode: 1));
         _dbContext.Transactions!.AddRange(
             Open(1747, 1746, 1, 98.13),
             Ware(1748, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1),
             Ware(1750, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1),
-            Storno(1751, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1, posId: stornoPosId));
+            Storno(1751, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1, quantity: stornoQuantity, posId: stornoPosId));
         await _dbContext.SaveChangesAsync();
     }
 

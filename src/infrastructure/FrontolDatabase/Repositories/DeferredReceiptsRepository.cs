@@ -98,7 +98,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             var (document, transactions) = loaded.Value;
             var now = DateTime.Now;
             var seller = SellerOf(transactions);
-            var wareCount = RemainingWareQuantity(transactions);
+            var wareCount = WareCount(transactions);
 
             _ctx.Transactions!.Add(CreateCloseLike(
                 await NextId(),
@@ -156,9 +156,8 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
 
             var now = DateTime.Now;
             var seller = SellerOf(transactions);
-            var remaining = NetWares(transactions);
-            var wareCount = remaining.Sum(w => w.Quantity);
-            var printGroups = WarePrintGroupCodes(remaining);
+            var wareCount = WareCount(transactions);
+            var printGroups = WarePrintGroupCodes(transactions);
 
             foreach (var printGroup in printGroups)
             {
@@ -384,21 +383,18 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .ToListAsync();
 
         var paid = PaidSumm(transactions);
-        var remaining = NetWares(transactions);
-        var goodsSumm = Math.Min(document.Summ, remaining.Sum(w => w.Summ));
-        var goodsSummWd = Math.Min(document.SummWd, remaining.Sum(w => w.SummWd));
         return Result.Success(new DeferredReceipt
         {
             Id = document.Id,
             CheckNumber = document.CheckNumber,
             OpenDate = document.OpenDate,
             OpenTime = document.OpenDate.Date + document.OpenTime.TimeOfDay,
-            Summ = goodsSumm,
-            SummWd = goodsSummWd,
+            Summ = document.Summ,
+            SummWd = document.SummWd,
             PaidSumm = paid,
-            RemainSumm = Math.Max(0, goodsSummWd - paid),
-            HasPrintGroup = remaining.Any(w => w.Source.PrintGroupClose != 0),
-            Positions = MapPositions(remaining, wares),
+            RemainSumm = Math.Max(0, document.SummWd - paid),
+            HasPrintGroup = HasPrintGroup(document, transactions),
+            Positions = MapPositions(NetWares(transactions), wares),
             Payments = MapPayments(transactions, payments)
         });
     }
@@ -561,34 +557,35 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .GroupBy(PositionKey)
             .ToDictionary(
                 g => g.Key,
-                g => (
-                    Quantity: g.Sum(s => Math.Abs(s.Quantity)),
-                    Summ: g.Sum(s => Math.Abs(s.Summ)),
-                    SummWd: g.Sum(s => Math.Abs(s.SummWd))));
+                g => g.Sum(s => Math.Abs(s.Quantity)));
 
         var remaining = new List<NetWare>();
         foreach (var group in transactions.Where(IsWare).GroupBy(PositionKey))
         {
             cancelledByKey.TryGetValue(group.Key, out var cancelled);
-            var quantity = group.Sum(t => t.Quantity) - cancelled.Quantity;
+            var quantity = group.Sum(t => t.Quantity) - cancelled;
             if (quantity <= 0.000001)
                 continue;
 
             var source = group.MaxBy(t => t.Id) ?? group.Last();
+            var sourceQty = group.Sum(t => t.Quantity);
             remaining.Add(new NetWare(
                 source,
                 quantity,
-                Math.Max(0, group.Sum(t => t.Summ) - cancelled.Summ),
-                Math.Max(0, group.Sum(t => t.SummWd) - cancelled.SummWd)));
+                group.Sum(t => t.Summ) * (quantity / sourceQty),
+                group.Sum(t => t.SummWd) * (quantity / sourceQty)));
         }
 
         return remaining;
     }
 
-    private static List<int> WarePrintGroupCodes(IReadOnlyList<NetWare> remaining) =>
-        remaining
-            .Where(w => w.Source.PrintGroupClose != 0)
-            .Select(w => w.Source.PrintGroupClose)
+    private static bool HasPrintGroup(Document document, IEnumerable<TranzT> transactions) =>
+        WarePrintGroupCodes(transactions).Count > 0;
+
+    private static List<int> WarePrintGroupCodes(IEnumerable<TranzT> transactions) =>
+        transactions
+            .Where(t => IsWare(t) && t.PrintGroupClose != 0)
+            .Select(t => t.PrintGroupClose)
             .Distinct()
             .ToList();
 
@@ -604,11 +601,11 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         return kindCode == 0 || kindCode == printGroupCode;
     }
 
-    private static double RemainByPrintGroup(IReadOnlyList<TranzT> transactions, int printGroupCode)
+    private static double RemainByPrintGroup(IEnumerable<TranzT> transactions, int printGroupCode)
     {
-        var goods = NetWares(transactions)
-            .Where(w => w.Source.PrintGroupClose == printGroupCode)
-            .Sum(w => w.SummWd);
+        var goods = transactions
+            .Where(t => IsWare(t) && t.PrintGroupClose == printGroupCode)
+            .Sum(t => t.SummWd);
 
         var paid = transactions
             .Where(t => t.TranzType == TranzTypeEnum.PaymentByPrintGroup && t.PrintGroupClose == printGroupCode)
@@ -622,14 +619,11 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .Where(t => t.TranzType is TranzTypeEnum.Payment or TranzTypeEnum.NonFiscalPayment)
             .Sum(t => t.Summ);
 
-    private static double RemainSumm(Document document, IReadOnlyList<TranzT> transactions)
-    {
-        var goodsWd = Math.Min(document.SummWd, NetWares(transactions).Sum(w => w.SummWd));
-        return goodsWd - PaidSumm(transactions);
-    }
+    private static double RemainSumm(Document document, IEnumerable<TranzT> transactions) =>
+        document.SummWd - PaidSumm(transactions);
 
-    private static double RemainingWareQuantity(IReadOnlyList<TranzT> transactions) =>
-        NetWares(transactions).Sum(w => w.Quantity);
+    private static int WareCount(IEnumerable<TranzT> transactions) =>
+        transactions.Count(IsWare) - transactions.Count(IsStorno);
 
     private static int SellerOf(IEnumerable<TranzT> transactions) =>
         transactions.FirstOrDefault(t => t.TranzType == TranzTypeEnum.OpenDocument)?.Seller ?? 1;
