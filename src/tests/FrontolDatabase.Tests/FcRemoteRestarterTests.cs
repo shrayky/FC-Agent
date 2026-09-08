@@ -37,16 +37,19 @@ public class FcRemoteRestarterTests
     }
 
     [Test]
-    public void Restart_ошибка_Kill_не_бросает()
+    public void Restart_после_ошибки_Kill_продолжает_убивать_процессы()
     {
-        var process = new Mock<IFcRemoteProcess>();
-        process.Setup(p => p.Kill()).Throws(new InvalidOperationException("нет доступа"));
+        var first = new Mock<IFcRemoteProcess>();
+        first.Setup(p => p.Kill()).Throws(new InvalidOperationException("нет доступа"));
+        var second = new Mock<IFcRemoteProcess>();
         var source = new Mock<IFcRemoteProcessSource>();
-        source.Setup(s => s.ListByName("fc-remote")).Returns([process.Object]);
+        source.Setup(s => s.ListByName("fc-remote")).Returns([first.Object, second.Object]);
         var sut = new FcRemoteRestarter(source.Object, NullLogger<FcRemoteRestarter>.Instance);
 
         var result = sut.Restart();
 
         Assert.That(result.IsSuccess, Is.True);
+        first.Verify(p => p.Kill(), Times.Once);
+        second.Verify(p => p.Kill(), Times.Once);
     }
 }

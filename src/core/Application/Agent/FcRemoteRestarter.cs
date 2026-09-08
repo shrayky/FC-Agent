@@ -31,7 +31,7 @@ public class FcRemoteRestarter : IFcRemoteRestarter
                 _logger.LogWarning("Процесс {ProcessName} не найден", ProcessName);
 
             foreach (var process in processes)
-                process.Kill();
+                KillQuiet(process);
         }
         catch (Exception ex)
         {
@@ -39,5 +39,17 @@ public class FcRemoteRestarter : IFcRemoteRestarter
         }
 
         return Result.Success();
+    }
+
+    private void KillQuiet(IFcRemoteProcess process)
+    {
+        try
+        {
+            process.Kill();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось завершить процесс {ProcessName}", ProcessName);
+        }
     }
 }
