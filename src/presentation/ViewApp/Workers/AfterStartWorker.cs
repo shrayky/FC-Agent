@@ -1,7 +1,7 @@
-﻿using Configuration.Services;
+﻿using Application.Frontol;
+using Configuration.Services;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
-using Domain.Frontol.Interfaces;
 
 namespace ViewApp.Workers
 {
@@ -9,20 +9,20 @@ namespace ViewApp.Workers
     {
         private readonly ILogger<AfterStartWorker> _logger;
         private readonly IApplicationState _applicationState;
-        private readonly IFrontolIni _frontolIni;
+        private readonly FrontolConnectionGuard _connectionGuard;
         private readonly IParametersService _parametersService;
         private readonly SidecarConnectionImporter _sidecarImporter;
 
         public AfterStartWorker(
             ILogger<AfterStartWorker> logger,
             IApplicationState applicationState,
-            IFrontolIni frontolIni,
+            FrontolConnectionGuard connectionGuard,
             IParametersService parametersService,
             SidecarConnectionImporter sidecarImporter)
         {
             _logger = logger;
             _applicationState = applicationState;
-            _frontolIni = frontolIni;
+            _connectionGuard = connectionGuard;
             _parametersService = parametersService;
             _sidecarImporter = sidecarImporter;
         }
@@ -37,13 +37,14 @@ namespace ViewApp.Workers
                 await _parametersService.Update(settings);
             }
 
+            await SyncFrontolDatabasePaths();
+            CheckRestartApplication();
+
             _logger.LogWarning("Служба запущена");
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 CheckRestartApplication();
-                
-                _ = await FillFrontolPathSettings();
                 
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
@@ -59,31 +60,36 @@ namespace ViewApp.Workers
             Environment.Exit(0);
         }
 
-        private async Task<bool> FillFrontolPathSettings()
+        // Пустые пути или расхождение с frontol.ini: ini — какая база у Frontol.
+        private async Task SyncFrontolDatabasePaths()
         {
             var settings = await _parametersService.Current();
+            var check = await _connectionGuard.Check(settings.DatabaseConnection);
 
-            if (!string.IsNullOrEmpty(settings.DatabaseConnection.DatabasePath) &&
-                !string.IsNullOrEmpty(settings.DatabaseConnection.LogDatabasePath))
-                return true;
-
-            var dbPathExtraction = await _frontolIni.FrontolDbPath();
-
-            if (dbPathExtraction.IsFailure)
+            if (check.Error is not null)
             {
-                _logger.LogError("Не удалось получить путь к main.gdb: {err}", dbPathExtraction.Error);
-                return false;
+                _logger.LogError("Не удалось проверить путь базы по frontol.ini: {err}", check.Error);
+                return;
             }
 
-            settings.DatabaseConnection.DatabasePath = dbPathExtraction.Value.mainPath;
-            settings.DatabaseConnection.LogDatabasePath = dbPathExtraction.Value.logPath;
-            
-            await _parametersService.Update(settings);
+            if (!check.NeedUpdate)
+                return;
+
+            _logger.LogWarning(
+                "Путь базы Frontol не совпадает с frontol.ini. Было {oldMain} / {oldLog}, станет {newMain} / {newLog}",
+                settings.DatabaseConnection.DatabasePath,
+                settings.DatabaseConnection.LogDatabasePath,
+                check.MainPath,
+                check.LogPath);
+
+            settings.DatabaseConnection.DatabasePath = check.MainPath;
+            settings.DatabaseConnection.LogDatabasePath = check.LogPath;
+
+            if (!await _parametersService.Update(settings))
+                return;
 
             if (!_applicationState.NeedRestart())
                 _applicationState.UpdateNeedRestart(true);
-            
-            return true;
         }
     }
 }

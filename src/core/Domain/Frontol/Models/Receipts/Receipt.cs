@@ -1,6 +1,6 @@
-namespace Domain.Frontol.Models.DeferredReceipts;
+namespace Domain.Frontol.Models.Receipts;
 
-public record DeferredReceipt
+public record Receipt
 {
     public long Id { get; init; }
 
@@ -20,7 +20,7 @@ public record DeferredReceipt
 
     public bool HasPrintGroup { get; init; }
 
-    public List<DeferredReceiptPosition> Positions { get; init; } = [];
+    public List<ReceiptPosition> Positions { get; init; } = [];
 
-    public List<DeferredReceiptPayment> Payments { get; init; } = [];
+    public List<ReceiptPayment> Payments { get; init; } = [];
 }

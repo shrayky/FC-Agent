@@ -1,6 +1,6 @@
-namespace Domain.Frontol.Models.DeferredReceipts;
+namespace Domain.Frontol.Models.Receipts;
 
-public record DeferredReceiptPosition
+public record ReceiptPosition
 {
     public int WareCode { get; init; }
 
@@ -19,4 +19,6 @@ public record DeferredReceiptPosition
     public int WareType { get; init; }
 
     public int PrintGroupCode { get; init; }
+
+    public bool Storno { get; init; }
 }

@@ -1,6 +1,6 @@
-namespace Domain.Frontol.Models.DeferredReceipts;
+namespace Domain.Frontol.Models.Receipts;
 
-public record DeferredReceiptPayment
+public record ReceiptPayment
 {
     public int PaymentCode { get; init; }
 

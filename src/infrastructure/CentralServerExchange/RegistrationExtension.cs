@@ -2,6 +2,8 @@
 using CentralServerExchange.Services;
 using CentralServerExchange.Workers;
 using Domain.Agent.Interfaces;
+using Domain.Sales;
+using Domain.Sales.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CentralServerExchange
@@ -34,10 +36,12 @@ namespace CentralServerExchange
             services.AddSingleton<FrontolSettingsService>();
             services.AddSingleton<IFcRemoteProcessSource, WindowsFcRemoteProcessSource>();
             
+            services.AddSingleton<ISalesCursorState, SalesCursorState>();
             services.AddSingleton<SignalRAgentClient>();
             
             services.AddHostedService<ExchangeWorker>();
             services.AddHostedService<UpdateDownloadWorker>();
+            services.AddHostedService<SalesSyncWorker>();
 
             return services;
         }

@@ -4,13 +4,14 @@ using Domain.Agent;
 using Domain.Agent.Interfaces;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
+using Domain.Configuration.Options;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
-using Domain.Frontol.Models.DeferredReceipts;
+using Domain.Frontol.Models.Receipts;
 using Domain.Messages.Dto;
 using Domain.Messages.Enums;
-using DotNetHost;
-using Microsoft.AspNetCore.SignalR.Client;
+using Domain.Sales.Interfaces;
+using DotNetHost;using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -24,24 +25,30 @@ public class SignalRAgentClient
     private readonly IApplicationState _applicationState;
     private readonly FrontolSettingsService _frontolSettingsService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ISalesCursorState _salesCursor;
     
-    private string _hubUrl = string.Empty;
-    private string _agentId = string.Empty;
+    private string _hubUrl = string.Empty;    private string _agentId = string.Empty;
     
     private HubConnection? _connection;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
     private bool _isRegistered;
 
-    public SignalRAgentClient(ILogger<SignalRAgentClient> logger, IParametersService parametersService, IApplicationState applicationState, FrontolSettingsService frontolSettingsService, IServiceScopeFactory serviceScopeFactory)
+    public SignalRAgentClient(
+        ILogger<SignalRAgentClient> logger,
+        IParametersService parametersService,
+        IApplicationState applicationState,
+        FrontolSettingsService frontolSettingsService,
+        IServiceScopeFactory serviceScopeFactory,
+        ISalesCursorState salesCursor)
     {
         _logger = logger;
         _parametersService = parametersService;
         _applicationState = applicationState;
         _frontolSettingsService = frontolSettingsService;
         _serviceScopeFactory = serviceScopeFactory;
-    }
-    
+        _salesCursor = salesCursor;
+    }    
     public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
 
     public async Task StartAsync()
@@ -75,7 +82,8 @@ public class SignalRAgentClient
         _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
         _connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
         _connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
-
+        _connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
+        _connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
         _connection.Reconnecting += error =>
         {
             _logger.LogWarning(error, "Переподключение к SignalR серверу...");
@@ -251,6 +259,85 @@ public class SignalRAgentClient
         return Task.CompletedTask;
     }
 
+    private async Task OnSalesSyncSettings(SalesSyncSettingsRequest message)
+    {
+        try
+        {
+            var current = await _parametersService.Current();
+            current.SalesSettings ??= new SalesSettings();
+            current.SalesSettings.LoadSales = message.LoadSales;
+            current.SalesSettings.PollIntervalSeconds =
+                message.PollIntervalSeconds <= 0 ? 60 : message.PollIntervalSeconds;
+
+            await _parametersService.Update(current);
+            _logger.LogInformation(
+                "Настройки сбора продаж: load={Load}, interval={Interval}",
+                current.SalesSettings.LoadSales,
+                current.SalesSettings.PollIntervalSeconds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка сохранения настроек сбора продаж");
+        }
+    }
+
+    private void OnSalesCursor(SalesCursorResponse message)
+    {
+        _salesCursor.Set(message.DocumentNumber);
+        _logger.LogInformation("Курсор продаж: {Number}", message.DocumentNumber);
+    }
+
+    public async Task RequestSalesCursor()
+    {
+        const string methodName = "SalesCursorRequest";
+
+        if (!CanSend(out _))
+            return;
+
+        try
+        {
+            var message = new SalesCursorRequest
+            {
+                AgentToken = _agentId
+            };
+
+            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка запроса курсора продаж");
+        }
+    }
+
+    public async Task<Result> SendSalesDocuments(IReadOnlyList<SalesDocument> documents)
+    {
+        const string methodName = "SalesDocuments";
+
+        if (documents.Count == 0)
+            return Result.Success();
+
+        if (!CanSend(out var error))
+            return Result.Failure(error);
+
+        try
+        {
+            var message = new SalesDocumentsMessage
+            {
+                AgentToken = _agentId,
+                Documents = documents.ToList()
+            };
+
+            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+            _logger.LogDebug("Отправлено чеков продаж: {Count}", documents.Count);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка отправки чеков продаж");
+            return Result.Failure(ex.Message);
+        }
+    }
+
     private async Task OnDeferredReceiptsRequest(DeferredReceiptsRequest message)
     {
         _logger.LogInformation("Отложенные чеки: {Operation}", message.Operation);
@@ -264,7 +351,7 @@ public class SignalRAgentClient
             if (command.IsFailure)
             {
                 _logger.LogError(command.Error);
-                await SendDeferredReceipts(message.Operation, Result.Failure<DeferredReceiptList>(command.Error));
+                await SendDeferredReceipts(message.Operation, Result.Failure<ReceiptList>(command.Error));
                 return;
             }
 
@@ -273,7 +360,7 @@ public class SignalRAgentClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка команды отложенного чека");
-            await SendDeferredReceipts(message.Operation, Result.Failure<DeferredReceiptList>(ex.Message));
+            await SendDeferredReceipts(message.Operation, Result.Failure<ReceiptList>(ex.Message));
         }
     }
 
@@ -468,7 +555,7 @@ public class SignalRAgentClient
         return Result.Success();
     }
 
-    private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<DeferredReceiptList> result)
+    private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<ReceiptList> result)
     {
         const string methodName = "DeferredReceipts";
 

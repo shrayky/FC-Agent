@@ -47,6 +47,7 @@ namespace FrontolDatabase
             services.AddScoped<IFrontolActionScripts, ActionScriptRepository>();
             services.AddScoped<IFrontolDevices, DevicesRepository>();
             services.AddScoped<IFrontolDeferredReceipts, DeferredReceiptsRepository>();
+            services.AddScoped<IFrontolSalesDocuments, SalesDocumentsRepository>();
             
             return services;
         }

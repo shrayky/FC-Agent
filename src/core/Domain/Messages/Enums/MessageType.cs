@@ -9,5 +9,8 @@ public enum MessageType
     FrontolSettingsApplying,
     PaySystemMode,
     DeferredReceipts,
-    RestartRemote
+    RestartRemote,
+    SalesSyncSettings,
+    SalesDocuments,
+    SalesCursorRequest
 }

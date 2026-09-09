@@ -1,17 +1,17 @@
 using CSharpFunctionalExtensions;
-using Domain.Frontol.Models.DeferredReceipts;
+using Domain.Frontol.Models.Receipts;
 
 namespace Domain.Frontol.Interfaces;
 
 public interface IFrontolDeferredReceipts
 {
-    Task<Result<DeferredReceiptList>> List();
+    Task<Result<ReceiptList>> List();
 
     Task<Result<int>> Count();
 
-    Task<Result<DeferredReceipt>> Cancel(long documentId);
+    Task<Result<Receipt>> Cancel(long documentId);
 
-    Task<Result<DeferredReceipt>> Close(long documentId, IReadOnlyList<DeferredReceiptPaymentItem>? payments = null);
+    Task<Result<Receipt>> Close(long documentId, IReadOnlyList<ReceiptPaymentItem>? payments = null);
 
-    Task<Result<DeferredReceipt>> AddPayment(long documentId, IReadOnlyList<DeferredReceiptPaymentItem> payments);
+    Task<Result<Receipt>> AddPayment(long documentId, IReadOnlyList<ReceiptPaymentItem> payments);
 }

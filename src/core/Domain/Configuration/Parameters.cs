@@ -21,6 +21,9 @@ namespace Domain.Configuration
         [JsonPropertyName("centralServerSettings")]
         public CentralServerConnection CentralServerSettings { get; set; } = new();
 
+        [JsonPropertyName("salesSettings")]
+        public SalesSettings SalesSettings { get; set; } = new();
+
         public override string ToString()
         {
             return JsonSerializer.Serialize(this);

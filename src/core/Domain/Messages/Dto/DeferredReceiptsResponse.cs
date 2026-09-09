@@ -1,4 +1,4 @@
-using Domain.Frontol.Models.DeferredReceipts;
+using Domain.Frontol.Models.Receipts;
 using Domain.Messages.Enums;
 
 namespace Domain.Messages.Dto;
@@ -16,7 +16,7 @@ public record DeferredReceiptsResponse : Message
 
     public string Error { get; set; } = string.Empty;
 
-    public List<DeferredReceipt> Receipts { get; set; } = [];
+    public List<Receipt> Receipts { get; set; } = [];
 
     public List<PaymentKind> PaymentKinds { get; set; } = [];
 

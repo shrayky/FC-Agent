@@ -9,10 +9,12 @@ public class MainDbCtx : DbContext
     public DbSet<CustomDb>? CustomDb { get; set; }
     public DbSet<Settings>? Settings { get; set; }
     public DbSet<Profile>? UserProfiles { get; set; }
+    public DbSet<User>? Users { get; set; }
     public DbSet<Security>? UserProfileSecurity { get; set; }
     public DbSet<ActScript>? ActionScripts {  get; set; }
     public DbSet<Devices>? Devices { get; set; }
     public DbSet<Document>? Documents { get; set; }
+    public DbSet<DocKind>? DocKinds { get; set; }
     public DbSet<TranzT>? Transactions { get; set; }
     public DbSet<Payment>? Payments { get; set; }
     public DbSet<SprT>? Wares { get; set; }
@@ -72,7 +74,9 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<Profile>()
             .Property(p => p.ForSelfieUser)
             .HasConversion(boolToIntConverter);
-        
+
+        modelBuilder.Entity<User>()
+            .HasKey(k => k.Id);
 
         modelBuilder.Entity<Security>()
             .HasKey(k => new { k.ProfileId, k.SecurityCode });
@@ -94,6 +98,29 @@ public class MainDbCtx : DbContext
 
         modelBuilder.Entity<Document>()
             .HasKey(k => k.Id);
+
+        modelBuilder.Entity<DocKind>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<DocKind>()
+            .Property(p => p.AskComment)
+            .HasConversion(boolToIntConverter);
+
+        modelBuilder.Entity<DocKind>()
+            .Property(p => p.AskEmployee)
+            .HasConversion(boolToIntConverter);
+
+        modelBuilder.Entity<DocKind>()
+            .Property(p => p.CopyEmployee)
+            .HasConversion(boolToIntConverter);
+
+        modelBuilder.Entity<DocKind>()
+            .Property(p => p.AskCommentOnOpen)
+            .HasConversion(boolToIntConverter);
+
+        modelBuilder.Entity<DocKind>()
+            .Property(p => p.Recompense)
+            .HasConversion(boolToIntConverter);
 
         modelBuilder.Entity<Document>()
             .Property(p => p.OpenTime)

@@ -1,4 +1,4 @@
-namespace Domain.Frontol.Models.DeferredReceipts;
+namespace Domain.Frontol.Models.Receipts;
 
 public record PrintGroupInfo
 {

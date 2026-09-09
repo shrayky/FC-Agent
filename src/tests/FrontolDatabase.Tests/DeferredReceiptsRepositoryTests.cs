@@ -1,6 +1,6 @@
 using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
-using Domain.Frontol.Models.DeferredReceipts;
+using Domain.Frontol.Models.Receipts;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +64,26 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public void WaresByCodes_sql_для_нескольких_кодов_без_FALSE()
+    {
+        var options = new DbContextOptionsBuilder<MainDbCtx>()
+            .UseFirebird("database=localhost:dummy.fdb;user=sysdba;password=masterkey")
+            .Options;
+
+        using var ctx = new MainDbCtx(options);
+        ctx.Wares = ctx.Set<SprT>();
+        var repository = new DeferredReceiptsRepository(
+            new Mock<ILogger<DeferredReceiptsRepository>>().Object,
+            ctx,
+            new Mock<IFrontolMainDb>().Object);
+
+        var sql = repository.WaresByCodesQuery([2, 3]).ToQueryString();
+
+        Assert.That(sql, Does.Not.Contain("FALSE").IgnoreCase);
+        Assert.That(sql, Does.Contain("CODE"));
+    }
+
+    [Test]
     public async Task List_без_товарных_строк_не_запрашивает_справочник()
     {
         await SeedPayment(1, "Наличные");
@@ -76,6 +96,25 @@ public class DeferredReceiptsRepositoryTests
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value.Receipts.Single().Id, Is.EqualTo(1801));
         Assert.That(result.Value.Receipts.Single().Positions, Is.Empty);
+    }
+
+    [Test]
+    public async Task List_сортирует_по_дате_убыванию()
+    {
+        await SeedPayment(1, "Наличные");
+        _dbContext.Documents!.Add(OpenedAt(1801, 220, new DateTime(2026, 9, 1, 8, 0, 0)));
+        _dbContext.Documents!.Add(OpenedAt(1802, 221, new DateTime(2026, 9, 4, 18, 30, 0)));
+        _dbContext.Documents!.Add(OpenedAt(1803, 222, new DateTime(2026, 9, 3, 12, 0, 0)));
+        _dbContext.Transactions!.AddRange(
+            Open(1901, 1801, 0, 0),
+            Open(1902, 1802, 0, 0),
+            Open(1903, 1803, 0, 0));
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value.Receipts.Select(r => r.Id), Is.EqualTo(new[] { 1802L, 1803L, 1801L }));
     }
 
     [Test]
@@ -146,6 +185,41 @@ public class DeferredReceiptsRepositoryTests
         var positions = result.Value.Receipts.Single().Positions;
         Assert.That(positions.Select(p => p.Name), Is.EqualTo(new[] { "Кофе", "Чай" }));
         Assert.That(positions.Select(p => p.WareCode), Is.EqualTo(new[] { 2, 3 }));
+    }
+
+    [Test]
+    public async Task List_передаёт_сторнированную_позицию_с_признаком_Storno()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedWare(3, "Чай");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithStorno();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var positions = result.Value.Receipts.Single().Positions;
+        Assert.That(positions, Has.Count.EqualTo(2));
+        Assert.That(positions.Single(p => p.WareCode == 2).Storno, Is.True);
+        Assert.That(positions.Single(p => p.WareCode == 2).Quantity, Is.EqualTo(1));
+        Assert.That(positions.Single(p => p.WareCode == 2).Summ, Is.EqualTo(98.13).Within(0.001));
+        Assert.That(positions.Single(p => p.WareCode == 3).Storno, Is.False);
+    }
+
+    [Test]
+    public async Task List_ставит_Storno_если_в_TRANZT_quantity_отрицательный()
+    {
+        await SeedWare(1685, "Весовой");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithNegativeStornoQuantity();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var positions = result.Value.Receipts.Single().Positions;
+        Assert.That(positions, Has.Count.EqualTo(2));
+        Assert.That(positions[0].Storno, Is.True);
+        Assert.That(positions[1].Storno, Is.False);
     }
 
     [Test]
@@ -226,6 +300,9 @@ public class DeferredReceiptsRepositoryTests
 
         var document = await _dbContext.Documents!.AsNoTracking().SingleAsync(d => d.Id == 1746);
         Assert.That(document.LastPaymNum, Is.EqualTo(2));
+        Assert.That(document.State, Is.EqualTo(DocumentStateEnum.Deffered));
+        Assert.That(document.CloseDate, Is.EqualTo(new DateTime(2026, 9, 3)));
+        Assert.That(document.CloseTime.TimeOfDay, Is.EqualTo(new TimeSpan(9, 0, 58)));
         _mainDb.Verify(m => m.NextChangeId(), Times.Once);
     }
 
@@ -357,7 +434,7 @@ public class DeferredReceiptsRepositoryTests
         await _dbContext.SaveChangesAsync();
     }
 
-    private static List<DeferredReceiptPaymentItem> PayItems(double summ, int printGroupCode = 0, int paymentCode = 1) =>
+    private static List<ReceiptPaymentItem> PayItems(double summ, int printGroupCode = 0, int paymentCode = 1) =>
     [
         new()
         {
@@ -400,6 +477,47 @@ public class DeferredReceiptsRepositoryTests
         await _dbContext.SaveChangesAsync();
     }
 
+    private async Task SeedDeferredWithStorno()
+    {
+        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 55.41, lastPaymNum: 0, printGroupCode: 1));
+        _dbContext.Transactions!.AddRange(
+            Open(1747, 1746, 1, 55.41),
+            Ware(1748, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1),
+            Storno(1749, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1),
+            Ware(1750, 1746, wareCode: 3, pos: 2, price: 55.41, printGroupClose: 1));
+        await _dbContext.SaveChangesAsync();
+    }
+
+    // Frontol: сторно (тип 12) пишет отрицательные Quantity/Summ, POSNUMB у первой позиции 0.
+    private async Task SeedDeferredWithNegativeStornoQuantity()
+    {
+        _dbContext.Documents!.Add(Document(1746, 207, DocumentStateEnum.Deffered, 485.46, lastPaymNum: 0, printGroupCode: 1));
+        var first = Ware(122297, 1746, wareCode: 1685, pos: 1, price: 930, printGroupClose: 1);
+        first.Quantity = 0.522;
+        first.Summ = 485.46;
+        first.SummWd = 485.46;
+        first.PosNumb = 0;
+
+        var storno = Storno(122298, 1746, wareCode: 1685, pos: 1, price: 930, printGroupClose: 1);
+        storno.Quantity = -0.522;
+        storno.Summ = -485.46;
+        storno.SummWd = -485.46;
+        storno.PosNumb = 0;
+
+        var second = Ware(122299, 1746, wareCode: 1685, pos: 2, price: 930, printGroupClose: 1);
+        second.Quantity = 0.522;
+        second.Summ = 485.46;
+        second.SummWd = 485.46;
+        second.PosNumb = 1;
+
+        _dbContext.Transactions!.AddRange(
+            Open(122296, 1746, 0.522, 485.46),
+            first,
+            storno,
+            second);
+        await _dbContext.SaveChangesAsync();
+    }
+
     private async Task SeedDeferredWithPartialPayment()
     {
         _dbContext.Documents!.Add(Document(1753, 208, DocumentStateEnum.Deffered, 98.13, lastPaymNum: 2, printGroupCode: 1));
@@ -417,20 +535,24 @@ public class DeferredReceiptsRepositoryTests
         await _dbContext.SaveChangesAsync();
     }
 
+    private static Document OpenedAt(long id, int checkNumber, DateTime opened) =>
+        Document(id, checkNumber, DocumentStateEnum.Deffered, 0, lastPaymNum: 0, printGroupCode: 0, opened);
+
     private static Document Document(
         long id,
         int checkNumber,
         DocumentStateEnum state,
         double summ,
         int lastPaymNum,
-        int printGroupCode) =>
+        int printGroupCode,
+        DateTime? opened = null) =>
         new()
         {
             Id = id,
             DocumentKindId = 1,
             CheckNumber = checkNumber,
-            OpenDate = new DateTime(2026, 9, 3),
-            OpenTime = new DateTime(2026, 9, 3, 9, 0, 50),
+            OpenDate = (opened ?? new DateTime(2026, 9, 3, 9, 0, 50)).Date,
+            OpenTime = opened ?? new DateTime(2026, 9, 3, 9, 0, 50),
             OpenUserId = 2151827,
             CloseDate = new DateTime(2026, 9, 3),
             CloseTime = new DateTime(2026, 9, 3, 9, 0, 58),
@@ -463,6 +585,13 @@ public class DeferredReceiptsRepositoryTests
         row.PosNumb = pos;
         row.OrderPos = 1;
         row.PrintGroupClose = printGroupClose;
+        return row;
+    }
+
+    private static TranzT Storno(long id, long documentId, int wareCode, int pos, double price, int printGroupClose)
+    {
+        var row = Ware(id, documentId, wareCode, pos, price, printGroupClose);
+        row.TranzType = TranzTypeEnum.StornoFromCatalog;
         return row;
     }
 

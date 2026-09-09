@@ -1,7 +1,8 @@
+using System.Linq.Expressions;
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
-using Domain.Frontol.Models.DeferredReceipts;
+using Domain.Frontol.Models.Receipts;
 using FrontolDatabase.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,30 +28,33 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         _mainDb = mainDb;
     }
 
-    public async Task<Result<DeferredReceiptList>> List()
+    public async Task<Result<ReceiptList>> List()
     {
         if (!TablesReady(out var error))
-            return Result.Failure<DeferredReceiptList>(error);
+            return Result.Failure<ReceiptList>(error);
 
         try
         {
-            var documents = await _ctx.Documents!
+            var documents = (await _ctx.Documents!
                 .AsNoTracking()
                 .Where(d => d.State == DocumentStateEnum.Deffered)
-                .ToListAsync();
+                .ToListAsync())
+                .OrderByDescending(d => d.OpenDate.Date + d.OpenTime.TimeOfDay)
+                .ThenByDescending(d => d.Id)
+                .ToList();
 
-            var receipts = new List<DeferredReceipt>();
+            var receipts = new List<Receipt>();
             foreach (var document in documents)
             {
                 var mapped = await MapReceipt(document);
                 if (mapped.IsFailure)
-                    return Result.Failure<DeferredReceiptList>(mapped.Error);
+                    return Result.Failure<ReceiptList>(mapped.Error);
 
                 receipts.Add(mapped.Value);
             }
 
             var printGroups = await LoadPrintGroups();
-            return Result.Success(new DeferredReceiptList
+            return Result.Success(new ReceiptList
             {
                 Receipts = receipts,
                 PaymentKinds = await LoadPaymentKinds(printGroups),
@@ -60,7 +64,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка чтения отложенных чеков");
-            return Result.Failure<DeferredReceiptList>(ex.Message);
+            return Result.Failure<ReceiptList>(ex.Message);
         }
     }
 
@@ -84,16 +88,16 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         }
     }
 
-    public async Task<Result<DeferredReceipt>> Cancel(long documentId)
+    public async Task<Result<Receipt>> Cancel(long documentId)
     {
         if (!TablesReady(out var error))
-            return Result.Failure<DeferredReceipt>(error);
+            return Result.Failure<Receipt>(error);
 
         try
         {
             var loaded = await LoadDeferred(documentId);
             if (loaded.IsFailure)
-                return Result.Failure<DeferredReceipt>(loaded.Error);
+                return Result.Failure<Receipt>(loaded.Error);
 
             var (document, transactions) = loaded.Value;
             var now = DateTime.Now;
@@ -121,22 +125,22 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка отмены отложенного чека {DocumentId}", documentId);
-            return Result.Failure<DeferredReceipt>(ex.Message);
+            return Result.Failure<Receipt>(ex.Message);
         }
     }
 
-    public async Task<Result<DeferredReceipt>> Close(
+    public async Task<Result<Receipt>> Close(
         long documentId,
-        IReadOnlyList<DeferredReceiptPaymentItem>? payments = null)
+        IReadOnlyList<ReceiptPaymentItem>? payments = null)
     {
         if (!TablesReady(out var error))
-            return Result.Failure<DeferredReceipt>(error);
+            return Result.Failure<Receipt>(error);
 
         try
         {
             var loaded = await LoadDeferred(documentId);
             if (loaded.IsFailure)
-                return Result.Failure<DeferredReceipt>(loaded.Error);
+                return Result.Failure<Receipt>(loaded.Error);
 
             var (document, transactions) = loaded.Value;
 
@@ -144,7 +148,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             {
                 var added = await WritePayments(document, transactions, payments);
                 if (added.IsFailure)
-                    return Result.Failure<DeferredReceipt>(added.Error);
+                    return Result.Failure<Receipt>(added.Error);
 
                 transactions.AddRange(_ctx.ChangeTracker.Entries<TranzT>()
                     .Where(e => e.State == EntityState.Added && e.Entity.DocumentId == documentId)
@@ -152,7 +156,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             }
 
             if (RemainSumm(document, transactions) > 0.001)
-                return Result.Failure<DeferredReceipt>("Документ оплачен не полностью");
+                return Result.Failure<Receipt>("Документ оплачен не полностью");
 
             var now = DateTime.Now;
             var seller = SellerOf(transactions);
@@ -193,27 +197,27 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка закрытия отложенного чека {DocumentId}", documentId);
-            return Result.Failure<DeferredReceipt>(ex.Message);
+            return Result.Failure<Receipt>(ex.Message);
         }
     }
 
-    public async Task<Result<DeferredReceipt>> AddPayment(
+    public async Task<Result<Receipt>> AddPayment(
         long documentId,
-        IReadOnlyList<DeferredReceiptPaymentItem> payments)
+        IReadOnlyList<ReceiptPaymentItem> payments)
     {
         if (!TablesReady(out var error))
-            return Result.Failure<DeferredReceipt>(error);
+            return Result.Failure<Receipt>(error);
 
         try
         {
             var loaded = await LoadDeferred(documentId);
             if (loaded.IsFailure)
-                return Result.Failure<DeferredReceipt>(loaded.Error);
+                return Result.Failure<Receipt>(loaded.Error);
 
             var (document, transactions) = loaded.Value;
             var added = await WritePayments(document, transactions, payments);
             if (added.IsFailure)
-                return Result.Failure<DeferredReceipt>(added.Error);
+                return Result.Failure<Receipt>(added.Error);
 
             await _ctx.SaveChangesAsync();
             return await MapReceipt(document);
@@ -221,7 +225,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка оплаты отложенного чека {DocumentId}", documentId);
-            return Result.Failure<DeferredReceipt>(ex.Message);
+            return Result.Failure<Receipt>(ex.Message);
         }
     }
 
@@ -265,7 +269,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
     private async Task<Result> WritePayments(
         Document document,
         List<TranzT> transactions,
-        IReadOnlyList<DeferredReceiptPaymentItem> payments)
+        IReadOnlyList<ReceiptPaymentItem> payments)
     {
         if (payments.Count == 0)
             return Result.Failure("Нет оплат для записи");
@@ -337,8 +341,6 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         }
 
         document.LastPaymNum = posNumb - 1;
-        document.CloseDate = now.Date;
-        document.CloseTime = now;
         return Result.Success();
     }
 
@@ -358,7 +360,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         return Result.Success((document, transactions));
     }
 
-    private async Task<Result<DeferredReceipt>> MapReceipt(Document document)
+    private async Task<Result<Receipt>> MapReceipt(Document document)
     {
         var transactions = await _ctx.Transactions!
             .AsNoTracking()
@@ -371,19 +373,14 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .Distinct()
             .ToList();
 
-        var wares = wareCodes.Count == 0
-            ? []
-            : await _ctx.Wares!
-                .AsNoTracking()
-                .Where(w => wareCodes.Contains(w.Code))
-                .ToListAsync();
+        var wares = await LoadWares(wareCodes);
 
         var payments = await _ctx.Payments!
             .AsNoTracking()
             .ToListAsync();
 
         var paid = PaidSumm(transactions);
-        return Result.Success(new DeferredReceipt
+        return Result.Success(new Receipt
         {
             Id = document.Id,
             CheckNumber = document.CheckNumber,
@@ -397,6 +394,28 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             Positions = MapPositions(transactions, wares),
             Payments = MapPayments(transactions, payments)
         });
+    }
+
+    private async Task<List<SprT>> LoadWares(IReadOnlyList<int> wareCodes)
+    {
+        if (wareCodes.Count == 0)
+            return [];
+
+        return await WaresByCodesQuery(wareCodes).ToListAsync();
+    }
+
+    // Firebird 2.1: Contains даёт WHERE FALSE на пустом списке, булева типа нет.
+    internal IQueryable<SprT> WaresByCodesQuery(IReadOnlyList<int> wareCodes)
+    {
+        var parameter = Expression.Parameter(typeof(SprT), "w");
+        var property = Expression.Property(parameter, nameof(SprT.Code));
+        Expression body = Expression.Equal(property, Expression.Constant(wareCodes[0]));
+        for (var i = 1; i < wareCodes.Count; i++)
+            body = Expression.OrElse(body, Expression.Equal(property, Expression.Constant(wareCodes[i])));
+
+        return _ctx.Wares!
+            .AsNoTracking()
+            .Where(Expression.Lambda<Func<SprT, bool>>(body, parameter));
     }
 
     private async Task<List<PrintGroupInfo>> LoadPrintGroups()
@@ -494,24 +513,25 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             PrintGroupClose = printGroupClose
         };
 
-    private static List<DeferredReceiptPosition> MapPositions(List<TranzT> transactions, List<SprT> wares)
+    private static List<ReceiptPosition> MapPositions(List<TranzT> transactions, List<SprT> wares)
     {
         var added = transactions.Where(IsWare).ToList();
         var storno = transactions.Where(IsStorno).ToList();
 
-        var positions = new List<DeferredReceiptPosition>();
+        var positions = new List<ReceiptPosition>();
         foreach (var ware in added)
         {
+            // Frontol: сторно (тип 12) пишет Quantity отрицательным.
             var cancelled = storno
                 .Where(s => s.PosId == ware.PosId && s.WareCode == ware.WareCode)
-                .Sum(s => s.Quantity);
+                .Sum(s => Math.Abs(s.Quantity));
 
-            var quantity = ware.Quantity - cancelled;
-            if (quantity <= 0)
-                continue;
+            var remaining = ware.Quantity - cancelled;
+            var stornoed = remaining <= 0.000001;
+            var quantity = stornoed ? ware.Quantity : remaining;
 
             var catalog = wares.FirstOrDefault(w => w.Code == ware.WareCode);
-            positions.Add(new DeferredReceiptPosition
+            positions.Add(new ReceiptPosition
             {
                 WareCode = ware.WareCode,
                 Name = catalog?.Name ?? ware.WareMark,
@@ -519,16 +539,17 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
                 Barcode = ware.Barcode,
                 Quantity = quantity,
                 Price = ware.Price,
-                Summ = ware.Summ * (quantity / ware.Quantity),
+                Summ = stornoed ? ware.Summ : ware.Summ * (quantity / ware.Quantity),
                 WareType = catalog?.WareType ?? 0,
-                PrintGroupCode = ware.PrintGroupClose
+                PrintGroupCode = ware.PrintGroupClose,
+                Storno = stornoed
             });
         }
 
         return positions;
     }
 
-    private static List<DeferredReceiptPayment> MapPayments(List<TranzT> transactions, List<Payment> payments)
+    private static List<ReceiptPayment> MapPayments(List<TranzT> transactions, List<Payment> payments)
     {
         var byGroup = transactions
             .Where(t => t.TranzType == TranzTypeEnum.PaymentByPrintGroup)
@@ -539,7 +560,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             : transactions.Where(t => t.TranzType is TranzTypeEnum.Payment or TranzTypeEnum.NonFiscalPayment);
 
         return source
-            .Select(t => new DeferredReceiptPayment
+            .Select(t => new ReceiptPayment
             {
                 PaymentCode = t.Info,
                 PaymentName = payments.FirstOrDefault(p => p.Code == t.Info)?.Name ?? string.Empty,
