@@ -2,6 +2,7 @@
 using CentralServerExchange.Services;
 using CentralServerExchange.Workers;
 using Domain.Agent.Interfaces;
+using Domain.Frontol.Interfaces;
 using Domain.Sales;
 using Domain.Sales.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ namespace CentralServerExchange
             
             services.AddSingleton<FrontolStateService>();
             services.AddSingleton<AtolLicenseService>();
+            services.AddSingleton<IAtolLicenseActivator, AtolLicenseActivator>();
             services.AddSingleton<AgentUpdateService>();
             services.AddSingleton<FrontolLogsService>();
             services.AddSingleton<FrontolSettingsService>();

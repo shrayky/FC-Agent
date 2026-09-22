@@ -19,6 +19,11 @@ public class MainDbCtx : DbContext
     public DbSet<Payment>? Payments { get; set; }
     public DbSet<SprT>? Wares { get; set; }
     public DbSet<PrintGroup>? PrintGroups { get; set; }
+    public DbSet<Remain>? Remains { get; set; }
+    public DbSet<RemainD>? RemainDs { get; set; }
+    public DbSet<PriceData>? PriceDatas { get; set; }
+    public DbSet<BarCode>? BarCodes { get; set; }
+    public DbSet<TaxGroup>? TaxGroups { get; set; }
     
     private readonly string _connectionString = string.Empty;   
     
@@ -150,7 +155,42 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<SprT>()
             .HasKey(k => k.Id);
 
+        modelBuilder.Entity<SprT>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
         modelBuilder.Entity<PrintGroup>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<Remain>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<Remain>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<RemainD>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<RemainD>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<PriceData>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<PriceData>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<BarCode>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<BarCode>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<TaxGroup>()
             .HasKey(k => k.Id);
     }
 

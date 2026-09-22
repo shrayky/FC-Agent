@@ -14,8 +14,6 @@ public record AtolCashRegisterDriver10Srcipt
     public string FileName { get; init; } = string.Empty;
 
     public string Script { get; init; } = string.Empty;
-
-    public bool CanDelete { get; init; }
 }
 
 public record ActionScript

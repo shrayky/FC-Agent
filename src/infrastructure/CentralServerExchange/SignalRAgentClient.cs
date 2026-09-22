@@ -81,9 +81,11 @@ public class SignalRAgentClient
         _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
         _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
         _connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
+        _connection.On<LicenseActivationRequest>("LicenseActivationRequest", OnLicenseActivationRequest);
         _connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
         _connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
         _connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
+        _connection.On<SalesDictionaryBatchMessage>("SalesDictionary", OnSalesDictionary);
         _connection.Reconnecting += error =>
         {
             _logger.LogWarning(error, "Переподключение к SignalR серверу...");
@@ -285,6 +287,22 @@ public class SignalRAgentClient
     {
         _salesCursor.Set(message.DocumentNumber);
         _logger.LogInformation("Курсор продаж: {Number}", message.DocumentNumber);
+    }
+
+    private async Task OnSalesDictionary(SalesDictionaryBatchMessage message)
+    {
+        _logger.LogInformation(
+            "Получен справочник продаж: групп {groups}, товаров {wares}",
+            message.Groups.Count,
+            message.Wares.Count);
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var apply = scope.ServiceProvider.GetRequiredService<IWareApplyService>();
+        var result = await apply.Apply(message.Groups, message.Wares);
+        if (result.IsFailure)
+            _logger.LogError(result.Error);
+
+        await SendSalesDictionaryApplying(result);
     }
 
     public async Task RequestSalesCursor()
@@ -555,6 +573,30 @@ public class SignalRAgentClient
         return Result.Success();
     }
 
+    private async Task SendSalesDictionaryApplying(Result result)
+    {
+        const string methodName = "SalesDictionaryApplying";
+
+        if (!CanSend(out _))
+            return;
+
+        try
+        {
+            var message = new SalesDictionaryApplyingState
+            {
+                AgentToken = _agentId,
+                Success = result.IsSuccess,
+                Message = result.IsFailure ? result.Error : string.Empty
+            };
+
+            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка отправки результата справочника");
+        }
+    }
+
     private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<ReceiptList> result)
     {
         const string methodName = "DeferredReceipts";
@@ -580,6 +622,53 @@ public class SignalRAgentClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка отправки отложенных чеков");
+        }
+    }
+
+    private async Task OnLicenseActivationRequest(LicenseActivationRequest message)
+    {
+        _logger.LogInformation("Получена команда активации лицензии {LicenseId}", message.LicenseId);
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var activator = scope.ServiceProvider.GetRequiredService<IAtolLicenseActivator>();
+
+        Result result;
+
+        try
+        {
+            result = await activator.Activate(message.LicenseId, message.ShopName, message.Company);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка активации лицензии {LicenseId}", message.LicenseId);
+            result = Result.Failure(ex.Message);
+        }
+
+        await SendLicenseActivationResult(message.LicenseId, result);
+    }
+
+    private async Task SendLicenseActivationResult(string licenseId, Result result)
+    {
+        const string methodName = "LicenseActivation";
+
+        if (!CanSend(out _))
+            return;
+
+        try
+        {
+            var message = new LicenseActivationResponse
+            {
+                AgentToken = _agentId,
+                LicenseId = licenseId,
+                Success = result.IsSuccess,
+                Error = result.IsFailure ? result.Error : string.Empty
+            };
+
+            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка отправки результата активации лицензии");
         }
     }
 

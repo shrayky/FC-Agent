@@ -12,5 +12,8 @@ public enum MessageType
     RestartRemote,
     SalesSyncSettings,
     SalesDocuments,
-    SalesCursorRequest
+    SalesCursorRequest,
+    SalesDictionary,
+    SalesDictionaryApplying,
+    LicenseActivation
 }
