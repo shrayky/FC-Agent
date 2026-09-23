@@ -1,0 +1,6 @@
+{
+  "name": "FC-Agent (.NET 10)",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh"
+}
