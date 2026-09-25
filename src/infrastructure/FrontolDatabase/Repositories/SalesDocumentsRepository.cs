@@ -60,12 +60,18 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
                 .Distinct()
                 .ToList();
 
-            var wares = wareCodes.Count == 0
-                ? []
-                : await WaresByCodesQuery(wareCodes).ToListAsync();
-            var waresByCode = wares
-                .GroupBy(w => w.Code)
-                .ToDictionary(g => g.Key, g => g.First());
+            // Продажам нужны только код и наименование товара: берём их проекцией,
+            // чтобы nullable-поля справочника Frontol не роняли чтение чеков.
+            var waresByCode = new Dictionary<int, string>();
+
+            if (wareCodes.Count > 0)
+            {
+                var wares = await WareNamesByCodesQuery(wareCodes).ToListAsync();
+
+                waresByCode = wares
+                    .GroupBy(ware => ware.Code)
+                    .ToDictionary(group => group.Key, group => group.First().Name);
+            }
 
             var cashierIds = documents
                 .Select(d => d.CloseUserId)
@@ -178,6 +184,21 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
             .Where(OrEquals<SprT, int>(parameter, property, wareCodes));
     }
 
+    // Только код и наименование. Поля справочника Frontol в базе nullable, и их чтение
+    // роняло весь сбор продаж (DBNull -> int), поэтому путь продаж держим узким.
+    internal IQueryable<SalesWareName> WareNamesByCodesQuery(IReadOnlyList<int> wareCodes) =>
+        WaresByCodesQuery(wareCodes).Select(ware => new SalesWareName
+        {
+            Code = ware.Code,
+            Name = ware.Name
+        });
+
+    internal sealed class SalesWareName
+    {
+        public int Code { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
     internal IQueryable<TranzT> TransactionsByDocumentIdsQuery(IReadOnlyList<long> documentIds)
     {
         var parameter = Expression.Parameter(typeof(TranzT), "t");
@@ -229,7 +250,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
     private static SalesDocument Map(
         Document document,
         List<TranzT> transactions,
-        Dictionary<int, SprT> wares,
+        Dictionary<int, string> wareNames,
         Dictionary<int, User> cashiers,
         Dictionary<int, Payment> payments,
         Dictionary<int, DocKind> docKinds)
@@ -252,7 +273,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
                 .Where(IsPosition)
                 .OrderBy(t => t.PosNumb)
                 .ThenBy(t => t.Id)
-                .Select(t => MapPosition(t, wares))
+                .Select(t => MapPosition(t, wareNames))
                 .ToList(),
             Payments = MapPayments(transactions, payments)
         };
@@ -266,15 +287,17 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         return document.CloseUserId == 0 ? string.Empty : document.CloseUserId.ToString();
     }
 
-    private static SalesPosition MapPosition(TranzT transaction, Dictionary<int, SprT> wares)
+    private static SalesPosition MapPosition(TranzT transaction, Dictionary<int, string> wareNames)
     {
-        wares.TryGetValue(transaction.WareCode, out var catalog);
+        var name = wareNames.TryGetValue(transaction.WareCode, out var catalogName)
+            ? catalogName
+            : transaction.WareMark;
         var storno = IsStorno(transaction);
 
         return new SalesPosition
         {
             WareCode = transaction.WareCode,
-            Name = catalog?.Name ?? transaction.WareMark,
+            Name = name,
             Barcode = transaction.Barcode,
             Quantity = storno ? -transaction.Quantity : transaction.Quantity,
             Price = transaction.Price,

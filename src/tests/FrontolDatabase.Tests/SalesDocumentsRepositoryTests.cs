@@ -185,6 +185,31 @@ public class SalesDocumentsRepositoryTests
         Assert.That(sql, Does.Contain("CODE"));
     }
 
+    // Регресс: пока продажи читали SPRT целиком, nullable-поля справочника роняли
+    // сбор чеков (DBNull -> int). Путь продаж обязан тянуть только код и наименование.
+    [Test]
+    public void WareNames_запрос_не_тянет_поля_справочника()
+    {
+        var options = new DbContextOptionsBuilder<MainDbCtx>()
+            .UseFirebird("database=localhost:dummy.fdb;user=sysdba;password=masterkey")
+            .Options;
+
+        using var ctx = new MainDbCtx(options);
+        ctx.Wares = ctx.Set<SprT>();
+        var repository = new SalesDocumentsRepository(
+            new Mock<ILogger<SalesDocumentsRepository>>().Object,
+            ctx);
+
+        var sql = repository.WareNamesByCodesQuery([2, 3]).ToQueryString();
+
+        Assert.That(sql, Does.Contain("NAME"));
+        Assert.That(sql, Does.Not.Contain("OWNERBDO").IgnoreCase);
+        Assert.That(sql, Does.Not.Contain("INSCHNG").IgnoreCase);
+        Assert.That(sql, Does.Not.Contain("MEASURE").IgnoreCase);
+        Assert.That(sql, Does.Not.Contain("PARENTID").IgnoreCase);
+        Assert.That(sql, Does.Not.Contain("TAXGROUPID").IgnoreCase);
+    }
+
     private async Task SeedWare(int code, string name)
     {
         _dbContext.Wares!.Add(new SprT

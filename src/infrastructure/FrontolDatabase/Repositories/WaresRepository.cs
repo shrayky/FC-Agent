@@ -123,7 +123,7 @@ public class WaresRepository : IFrontolWares
         row.Name = name;
         row.Mark = ExtraString(extra, "mark", row.Mark);
         row.ParentId = parent?.Id ?? 0;
-        row.HierLevel = parent == null ? 0 : parent.HierLevel + 1;
+        row.HierLevel = parent == null ? 0 : (parent.HierLevel ?? 0) + 1;
         row.Flags = ExtraInt(extra, "flags", isWare ? 6 : 0);
         row.WareType = ExtraInt(extra, "wareType", 0);
         row.Measure = ExtraInt(extra, "measure", 0);
