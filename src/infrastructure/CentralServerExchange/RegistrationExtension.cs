@@ -6,17 +6,24 @@ using Domain.Frontol.Interfaces;
 using Domain.Sales;
 using Domain.Sales.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CentralServerExchange
 {
     public static class RegistrationExtension
     {
+        private const string UpdateDownloaderClientName = "UpdateDownloader";
+
         public static IServiceCollection AddCentralServerClient(this IServiceCollection services)
         {
-
-            var updaterClient = services.AddHttpClient<AgentUpdateService>("UpdateDownloader", client =>
+            // Именованный, а не типизированный клиент: AgentUpdateService регистрируется ниже как singleton,
+            // и типизированная регистрация (transient) была бы им перекрыта — тогда в загрузчик обновлений
+            // попадал бы безымянный HttpClient без TLS 1.2 и с таймаутом 100 секунд по умолчанию.
+            var updaterClient = services.AddHttpClient(UpdateDownloaderClientName, client =>
             {
-                client.Timeout = TimeSpan.FromMinutes(30);
+                // Архив обновления ~8 МБ, и загрузка докачивается с текущей позиции,
+                // поэтому таймаут ограничивает только одну попытку, а не всю загрузку.
+                client.Timeout = TimeSpan.FromMinutes(5);
                 if (!ForceHttp11MessageHandler.IsRequiredOnThisOs)
                     return;
 
@@ -29,11 +36,14 @@ namespace CentralServerExchange
                 updaterClient.ConfigurePrimaryHttpMessageHandler(
                     () => new ForceHttp11MessageHandler(new SocketsHttpHandler()));
             }
-            
+
+            services.AddSingleton(sp => new AgentUpdateService(
+                sp.GetRequiredService<ILogger<AgentUpdateService>>(),
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient(UpdateDownloaderClientName)));
+
             services.AddSingleton<FrontolStateService>();
             services.AddSingleton<AtolLicenseService>();
             services.AddSingleton<IAtolLicenseActivator, AtolLicenseActivator>();
-            services.AddSingleton<AgentUpdateService>();
             services.AddSingleton<FrontolLogsService>();
             services.AddSingleton<FrontolSettingsService>();
             services.AddSingleton<IFcRemoteProcessSource, WindowsFcRemoteProcessSource>();

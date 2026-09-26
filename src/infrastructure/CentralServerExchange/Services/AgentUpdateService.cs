@@ -30,9 +30,8 @@ public class AgentUpdateService
         {
             _logger.LogInformation("Доступно обновление ПО в центральном сервере");
 
-            var prepareUpdate = await DownloadSoftware(requestAddress)
-                .Bind(async fileStream => await CheckShaHash(fileStream, updateHash))
-                .Bind(async fileStream => await SaveToTemp(fileStream));
+            var prepareUpdate = await DownloadSoftware(requestAddress, updateHash)
+                .Bind(path => CheckShaHash(path, updateHash));
 
             if (prepareUpdate.IsFailure)
             {
@@ -54,70 +53,82 @@ public class AgentUpdateService
         }
     }
 
-    private async Task<Result<Stream>> DownloadSoftware(string requestAddress)
+    /// <summary>
+    /// Скачивает архив обновления в temp. Имя файла содержит ожидаемый хэш, поэтому докачка
+    /// продолжит только тот же самый архив и никогда не подхватит недокачанную другую версию.
+    /// </summary>
+    private async Task<Result<string>> DownloadSoftware(string requestAddress, string updateHash)
     {
         var directoryPath = Path.Combine(Path.GetTempPath(), ApplicationInformation.Name);
+        Directory.CreateDirectory(directoryPath);
 
-        if (Directory.Exists(directoryPath))
+        var archivePath = ArchivePath(directoryPath, updateHash);
+
+        // Распакованные файлы прошлой попытки не нужны, а недокачанный текущий архив — нужен.
+        foreach (var file in Directory.EnumerateFiles(directoryPath))
         {
-            Directory.Delete(directoryPath, true);
-            Directory.CreateDirectory(directoryPath);
+            if (string.Equals(file, archivePath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Не удалось удалить {FilePath} перед загрузкой обновления: {Error}", file, e.Message);
+            }
         }
 
         var result = await _httpClient.DownloadFileWithResumeAsync(
             requestAddress,
-            Path.Combine(Path.GetTempPath(), ApplicationInformation.Name, "update.zip"),
+            archivePath,
             _logger,
             cancellationToken: CancellationToken.None);
 
         if (result.IsFailure)
-            return Result.Failure<Stream>(result.Error);
+            return Result.Failure<string>(result.Error);
 
         _logger.LogInformation("Файл обновления успешно загружен");
         return Result.Success(result.Value);
     }
 
-    private async Task<Result<Stream>> CheckShaHash(Stream fileStream, string expectedSha256)
+    private static string ArchivePath(string directoryPath, string updateHash)
     {
-        using var downloadedSha256 = SHA256.Create();
-        var hashBytes = await downloadedSha256.ComputeHashAsync(fileStream).ConfigureAwait(false);
-        var actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
-    
-        fileStream.Position = 0;
-
-        if (string.Equals(actualHash, expectedSha256))
-            return Result.Success(fileStream);
-        
-        var errorMessage = $"Хэш {actualHash} загруженного файла обновления не совпадает с ожидаемым {expectedSha256}";
-        _logger.LogError(errorMessage);
-        
-        await fileStream.DisposeAsync();
-        return Result.Failure<Stream>(errorMessage);
+        // Хэш приходит от сервера, поэтому оставляем от него только hex-символы, чтобы он не сломал путь.
+        var safeHash = new string(updateHash.Where(char.IsAsciiHexDigit).ToArray());
+        return Path.Combine(directoryPath, $"update-{safeHash}.zip");
     }
 
-    private async Task<Result<string>> SaveToTemp(Stream stream)
+    private async Task<Result<string>> CheckShaHash(string filePath, string expectedSha256)
     {
-        var tmpFolder = Path.Combine(Path.GetTempPath(), ApplicationInformation.Name);
-        var filePath = Path.Combine(tmpFolder, "update.zip");
+        string actualHash;
 
+        await using (var fileStream = File.OpenRead(filePath))
+        using (var sha256 = SHA256.Create())
+        {
+            var hashBytes = await sha256.ComputeHashAsync(fileStream).ConfigureAwait(false);
+            actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+        }
+
+        if (string.Equals(actualHash, expectedSha256, StringComparison.OrdinalIgnoreCase))
+            return Result.Success(filePath);
+
+        var errorMessage = $"Хэш {actualHash} загруженного файла обновления не совпадает с ожидаемым {expectedSha256}";
+        _logger.LogError(errorMessage);
+
+        // Испорченный файл удаляем: иначе следующая попытка докачала бы его с текущей позиции,
+        // и хэш никогда бы не совпал.
         try
         {
-            if (!Directory.Exists(tmpFolder))
-                Directory.CreateDirectory(tmpFolder);
-
-            await using var fileStream = File.Create(filePath);
-            await stream.CopyToAsync(fileStream);
-
-            _logger.LogInformation("Обновление загружено в: {FilePath}", filePath);
-
-            return Result.Success(filePath);
+            File.Delete(filePath);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            var errMsg = $"Ошибка копирования скачанного файла обновления в {filePath}: {e.Message}";
-            _logger.LogError(errMsg);
-            return Result.Failure<string>(errMsg);
+            _logger.LogWarning("Не удалось удалить файл обновления {FilePath}: {Error}", filePath, e.Message);
         }
+
+        return Result.Failure<string>(errorMessage);
     }
 
     private Result InstallUpdate(string updateFileName)
