@@ -40,11 +40,12 @@ public class AgentDataFactoryTests
 
         try
         {
-            var data = AgentDataFactory.Current(["Microsoft.AspNetCore.App/10.0.2"], mainPath, logPath, disks);
+            var data = AgentDataFactory.Current(["Microsoft.AspNetCore.App/10.0.2"], mainPath, logPath, disks, 256);
 
             Assert.That(data.Version, Is.EqualTo(ApplicationInformation.Version));
             Assert.That(data.MainGdbSize, Is.EqualTo(256));
             Assert.That(data.LogGdbSize, Is.EqualTo(64));
+            Assert.That(data.DriverAto10lLogsSize, Is.EqualTo(256));
             Assert.That(data.Disks, Has.Count.EqualTo(1));
             Assert.That(data.Disks[0].Name, Is.EqualTo("SAMSUNG"));
             Assert.That(data.Disks[0].LifePercent, Is.EqualTo(98));
@@ -56,5 +57,16 @@ public class AgentDataFactoryTests
         {
             Directory.Delete(folder, true);
         }
+    }
+
+    /// <summary>
+    /// Без размера логов АТОЛ поле остаётся нулевым, а не падает.
+    /// </summary>
+    [Test]
+    public void Current_без_размера_логов_атол_ставит_0()
+    {
+        var data = AgentDataFactory.Current(["Microsoft.AspNetCore.App/10.0.2"]);
+
+        Assert.That(data.DriverAto10lLogsSize, Is.EqualTo(0));
     }
 }

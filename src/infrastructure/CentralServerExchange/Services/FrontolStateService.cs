@@ -54,7 +54,8 @@ public class FrontolStateService
                 InstalledDotNetRuntimes.ListFromWindows(),
                 settings.DatabaseConnection.DatabasePath,
                 settings.DatabaseConnection.LogDatabasePath,
-                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath)),
+                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath),
+                DriverAto10lLogsSizeReader.TotalBytes()),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),
