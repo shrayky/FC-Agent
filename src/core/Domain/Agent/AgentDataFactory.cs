@@ -10,7 +10,8 @@ public static class AgentDataFactory
         IReadOnlyList<string> installedRuntimes,
         string mainGdbPath = "",
         string logGdbPath = "",
-        IReadOnlyList<PhysicalDiskHealth>? disks = null)
+        IReadOnlyList<PhysicalDiskHealth>? disks = null,
+        long driverAto10lLogsSize = 0)
     {
         return new AgentData
         {
@@ -23,7 +24,8 @@ public static class AgentDataFactory
             InstalledRuntimes = [..installedRuntimes],
             Disks = [..(disks ?? [])],
             MainGdbSize = DriveMetricsReader.FileSize(mainGdbPath),
-            LogGdbSize = DriveMetricsReader.FileSize(logGdbPath)
+            LogGdbSize = DriveMetricsReader.FileSize(logGdbPath),
+            DriverAto10lLogsSize = driverAto10lLogsSize
         };
     }
 }

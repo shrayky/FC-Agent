@@ -1,10 +1,12 @@
 using CentralServerExchange.Services;
 using CSharpFunctionalExtensions;
 using Domain.Agent;
+using Domain.Agent.Dto;
 using Domain.Agent.Interfaces;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
 using Domain.Configuration.Options;
+using Domain.Configuration;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
 using Domain.Frontol.Models.Receipts;
@@ -129,6 +131,14 @@ public class SignalRAgentClient
         }
     }
     
+    private static AgentData BuildAgentData(Parameters settings) =>
+        AgentDataFactory.Current(
+            InstalledDotNetRuntimes.ListFromWindows(),
+            settings.DatabaseConnection.DatabasePath,
+            settings.DatabaseConnection.LogDatabasePath,
+            PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath),
+            DriverAto10lLogsSizeReader.TotalBytes());
+
     private async Task RegisterAgentAsync()
     {
         if (_connection == null || _connection.State != HubConnectionState.Connected)
@@ -141,11 +151,7 @@ public class SignalRAgentClient
         var agentData = new AgentStateResponse()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current(
-                InstalledDotNetRuntimes.ListFromWindows(),
-                settings.DatabaseConnection.DatabasePath,
-                settings.DatabaseConnection.LogDatabasePath,
-                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath)),
+            AgentInformation = BuildAgentData(settings),
         };
         
         try
@@ -471,11 +477,7 @@ public class SignalRAgentClient
         NewVersionRequest message = new()
         {
             AgentToken = _agentId,
-            AgentInformation = AgentDataFactory.Current(
-                InstalledDotNetRuntimes.ListFromWindows(),
-                settings.DatabaseConnection.DatabasePath,
-                settings.DatabaseConnection.LogDatabasePath,
-                PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath))
+            AgentInformation = BuildAgentData(settings)
         };
         
         try

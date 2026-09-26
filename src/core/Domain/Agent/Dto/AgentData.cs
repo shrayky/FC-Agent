@@ -12,4 +12,5 @@ public class AgentData
     public List<PhysicalDiskHealth> Disks { get; set; } = [];
     public long MainGdbSize { get; set; }
     public long LogGdbSize { get; set; }
+    public long DriverAto10lLogsSize { get; set; }
 }
