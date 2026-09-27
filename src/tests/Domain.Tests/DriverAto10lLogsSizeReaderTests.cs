@@ -106,6 +106,30 @@ public class DriverAto10lLogsSizeReaderTests
     }
 
     /// <summary>
+    /// Ошибка обхода попадает в onError и не роняет подсчёт: иначе отказ доступа неотличим от «логов нет».
+    /// </summary>
+    [Test]
+    public void DirectorySizeBytes_сообщает_об_ошибке_обхода()
+    {
+        var link = Path.Combine(_root, "link");
+        var target = Path.Combine(_root, "target");
+        Directory.CreateDirectory(target);
+
+        if (!TryCreateJunction(link, target))
+            Assert.Ignore("Junction недоступен на этой машине");
+
+        // Цель удалена, junction остался битым — его обход даёт ошибку.
+        Directory.Delete(target);
+
+        var errors = new List<string>();
+        var total = DriverAto10lLogsSizeReader.DirectorySizeBytes(link, errors.Add);
+
+        Assert.That(total, Is.EqualTo(0));
+        Assert.That(errors, Is.Not.Empty);
+        Assert.That(errors[0], Does.Contain(link));
+    }
+
+    /// <summary>
     /// Обходятся профили всех пользователей, каталоги не-профилей (Public, Default) отбрасываются.
     /// </summary>
     [Test]

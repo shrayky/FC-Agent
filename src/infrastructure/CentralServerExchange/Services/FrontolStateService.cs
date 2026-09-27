@@ -55,7 +55,7 @@ public class FrontolStateService
                 settings.DatabaseConnection.DatabasePath,
                 settings.DatabaseConnection.LogDatabasePath,
                 PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath),
-                DriverAto10lLogsSizeReader.TotalBytes()),
+                DriverAto10lLogsSizeReader.TotalBytes(message => _logger.LogWarning(message))),
             
             FrontolVersion = frontolVersion,
             Licenses = _atolLicenseService.FromFiles(),

@@ -13,7 +13,8 @@ using Domain.Frontol.Models.Receipts;
 using Domain.Messages.Dto;
 using Domain.Messages.Enums;
 using Domain.Sales.Interfaces;
-using DotNetHost;using Microsoft.AspNetCore.SignalR.Client;
+using DotNetHost;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -131,13 +132,13 @@ public class SignalRAgentClient
         }
     }
     
-    private static AgentData BuildAgentData(Parameters settings) =>
+    private AgentData BuildAgentData(Parameters settings) =>
         AgentDataFactory.Current(
             InstalledDotNetRuntimes.ListFromWindows(),
             settings.DatabaseConnection.DatabasePath,
             settings.DatabaseConnection.LogDatabasePath,
             PhysicalDiskHealthReader.List(settings.DatabaseConnection.DatabasePath),
-            DriverAto10lLogsSizeReader.TotalBytes());
+            DriverAto10lLogsSizeReader.TotalBytes(message => _logger.LogWarning(message)));
 
     private async Task RegisterAgentAsync()
     {
