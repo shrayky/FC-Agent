@@ -45,6 +45,7 @@ namespace CentralServerExchange
             services.AddSingleton<AtolLicenseService>();
             services.AddSingleton<IAtolLicenseActivator, AtolLicenseActivator>();
             services.AddSingleton<FrontolLogsService>();
+            services.AddSingleton<AgentLogsService>();
             services.AddSingleton<FrontolSettingsService>();
             services.AddSingleton<IFcRemoteProcessSource, WindowsFcRemoteProcessSource>();
             

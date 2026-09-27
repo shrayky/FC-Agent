@@ -13,6 +13,10 @@ namespace Logger
     {
         public static IServiceCollection AddConfigureLogger(this IServiceCollection services, LogSettings settings)
         {
+            // Сборщик логов регистрируется и при выключенном файловом логировании:
+            // по нему агент отвечает на команду сервера о своих логах (пакет будет пустым).
+            services.AddAutoRegisteredServices([Assembly.GetExecutingAssembly()]);
+
             if (!settings.IsEnabled)
                 return services;
 
@@ -27,8 +31,6 @@ namespace Logger
             {
                 builder.AddSerilog(SerilogConfiguration.LogToFile(settings.LogLevel, logFileName, settings.LogDepth));
             });
-
-            services.AddAutoRegisteredServices([Assembly.GetExecutingAssembly()]);
 
             return services;
         }

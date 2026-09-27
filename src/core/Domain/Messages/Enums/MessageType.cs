@@ -15,5 +15,6 @@ public enum MessageType
     SalesCursorRequest,
     SalesDictionary,
     SalesDictionaryApplying,
-    LicenseActivation
+    LicenseActivation,
+    AgentLogs
 }

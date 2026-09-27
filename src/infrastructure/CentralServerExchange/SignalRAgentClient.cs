@@ -1,12 +1,12 @@
-using CentralServerExchange.Services;
+﻿using CentralServerExchange.Services;
 using CSharpFunctionalExtensions;
 using Domain.Agent;
 using Domain.Agent.Dto;
 using Domain.Agent.Interfaces;
 using Domain.AppState.Interfaces;
+using Domain.Configuration;
 using Domain.Configuration.Interfaces;
 using Domain.Configuration.Options;
-using Domain.Configuration;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
 using Domain.Frontol.Models.Receipts;
@@ -17,24 +17,36 @@ using DotNetHost;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Serilog;
 
 namespace CentralServerExchange;
 
+/// <summary>
+/// SignalR-клиент агента: подключение к центральному серверу, приём команд и отправка ответов.
+/// </summary>
+/// <remarks>
+/// Имена hub-методов задаются одним аргументом в вызове <c>Send(Message, "HubMethod")</c> —
+/// держать имя метода рядом с местом отправки важнее, чем спрятать его в реестр:
+/// так видно, какой метод сервера дёргается и какое сообщение при этом уходит.
+/// </remarks>
 public class SignalRAgentClient
 {
+    private const string NoConnectionError = "Невозможно отправить данные: соединение не установлено";
+    private const string NotRegisteredError = "Агент не зарегистрирован";
+
     private readonly ILogger<SignalRAgentClient> _logger;
     private readonly IParametersService _parametersService;
     private readonly IApplicationState _applicationState;
     private readonly FrontolSettingsService _frontolSettingsService;
+    private readonly AgentLogsService _agentLogsService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ISalesCursorState _salesCursor;
-    
-    private string _hubUrl = string.Empty;    private string _agentId = string.Empty;
-    
+
+    private string _hubUrl = string.Empty;
+    private string _agentId = string.Empty;
+
     private HubConnection? _connection;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    
+
     private bool _isRegistered;
 
     public SignalRAgentClient(
@@ -42,6 +54,7 @@ public class SignalRAgentClient
         IParametersService parametersService,
         IApplicationState applicationState,
         FrontolSettingsService frontolSettingsService,
+        AgentLogsService agentLogsService,
         IServiceScopeFactory serviceScopeFactory,
         ISalesCursorState salesCursor)
     {
@@ -49,10 +62,12 @@ public class SignalRAgentClient
         _parametersService = parametersService;
         _applicationState = applicationState;
         _frontolSettingsService = frontolSettingsService;
+        _agentLogsService = agentLogsService;
         _serviceScopeFactory = serviceScopeFactory;
         _salesCursor = salesCursor;
-    }    
-    public bool ConnectionUp() => !(_connection == null || _connection.State != HubConnectionState.Connected);
+    }
+
+    public bool ConnectionUp() => _connection is { State: HubConnectionState.Connected };
 
     public async Task StartAsync()
     {
@@ -65,7 +80,7 @@ public class SignalRAgentClient
             _logger.LogDebug("Нет настроек для подключения к центральному серверу");
             return;
         }
-        
+
         _connection = new HubConnectionBuilder()
             .WithUrl(_hubUrl, options =>
             {
@@ -77,43 +92,7 @@ public class SignalRAgentClient
             ])
             .Build();
 
-        _connection.On<string>("AgentRegistered", OnAgentRegistered);
-        _connection.On<string>("ReceiveMessage", OnReceiveMessage);
-        _connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
-        _connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
-        _connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
-        _connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
-        _connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
-        _connection.On<LicenseActivationRequest>("LicenseActivationRequest", OnLicenseActivationRequest);
-        _connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
-        _connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
-        _connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
-        _connection.On<SalesDictionaryBatchMessage>("SalesDictionary", OnSalesDictionary);
-        _connection.Reconnecting += error =>
-        {
-            _logger.LogWarning(error, "Переподключение к SignalR серверу...");
-            _isRegistered = false;
-            return Task.CompletedTask;
-        };
-
-        _connection.Reconnected += connectionId =>
-        {
-            _logger.LogInformation("Переподключено к SignalR серверу. ConnectionId: {ConnectionId}", connectionId);
-            _ = Task.Run(async () => await RegisterAgentAsync());
-            return Task.CompletedTask;
-        };
-
-        _connection.Closed += async error =>
-        {
-            _logger.LogError(error, "Соединение с SignalR сервером закрыто");
-            _isRegistered = false;
-
-            if (error != null)
-            {
-                await Task.Delay(5000, _cancellationTokenSource.Token);
-                await StartAsync();
-            }
-        };
+        SubscribeHandlers(_connection);
 
         try
         {
@@ -131,7 +110,53 @@ public class SignalRAgentClient
                 Environment.OSVersion);
         }
     }
-    
+
+    /// <summary>
+    /// Подписки на команды сервера. Одна строка на команду: имя hub-метода, тип запроса, обработчик.
+    /// </summary>
+    private void SubscribeHandlers(HubConnection connection)
+    {
+        connection.On<string>("AgentRegistered", OnAgentRegistered);
+        connection.On<string>("ReceiveMessage", OnReceiveMessage);
+        connection.On<NewVersionResponse>("NewVersionResponse", OnNewVersionResponse);
+        connection.On<FrontolSettingsRequest>("FrontolSettingsRequest", OnFrontolSettingsRequest);
+        connection.On<FrontolSettingsResponse>("FrontolSettings", OnFrontolSettings);
+        connection.On<PaySystemModeRequest>("PaySystemMode", OnPaySystemMode);
+        connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
+        connection.On<LicenseActivationRequest>("LicenseActivationRequest", OnLicenseActivationRequest);
+        connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
+        connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
+        connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
+        connection.On<SalesDictionaryBatchMessage>("SalesDictionary", OnSalesDictionary);
+        connection.On<AgentLogsRequest>("AgentLogsRequest", OnAgentLogsRequest);
+
+        connection.Reconnecting += error =>
+        {
+            _logger.LogWarning(error, "Переподключение к SignalR серверу...");
+            _isRegistered = false;
+            return Task.CompletedTask;
+        };
+
+        connection.Reconnected += connectionId =>
+        {
+            _logger.LogInformation("Переподключено к SignalR серверу. ConnectionId: {ConnectionId}", connectionId);
+            _ = Task.Run(RegisterAgentAsync);
+            return Task.CompletedTask;
+        };
+
+        connection.Closed += async error =>
+        {
+            _logger.LogError(error, "Соединение с SignalR сервером закрыто");
+            _isRegistered = false;
+
+            if (error != null)
+            {
+                await Task.Delay(5000, _cancellationTokenSource.Token);
+                await StartAsync();
+            }
+        };
+    }
+
     private AgentData BuildAgentData(Parameters settings) =>
         AgentDataFactory.Current(
             InstalledDotNetRuntimes.ListFromWindows(),
@@ -147,14 +172,14 @@ public class SignalRAgentClient
             _logger.LogWarning("Невозможно зарегистрировать агента: соединение не установлено");
             return;
         }
-       
+
         var settings = await _parametersService.Current();
-        var agentData = new AgentStateResponse()
+        var agentData = new AgentStateResponse
         {
             AgentToken = _agentId,
             AgentInformation = BuildAgentData(settings),
         };
-        
+
         try
         {
             await _connection.InvokeAsync("RegisterAgent", agentData, _cancellationTokenSource.Token);
@@ -164,21 +189,210 @@ public class SignalRAgentClient
             _logger.LogError(ex, "Ошибка при регистрации агента");
         }
     }
-    
+
+    // ---------------------------------------------------------------------
+    // Отправка на сервер
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Отправляет сообщение и заполняет <see cref="Message.AgentToken"/>.
+    /// </summary>
+    private async Task<Result> Send(Message message, string hubMethod)
+    {
+        message.AgentToken = _agentId;
+
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            _logger.LogWarning("{Error}. HubMethod: {HubMethod}", NoConnectionError, hubMethod);
+            return Result.Failure(NoConnectionError);
+        }
+
+        if (!_isRegistered)
+        {
+            _logger.LogWarning("{Error}. Попытка повторной регистрации... HubMethod: {HubMethod}", NotRegisteredError, hubMethod);
+            await RegisterAgentAsync();
+            return Result.Failure(NotRegisteredError);
+        }
+
+        try
+        {
+            await _connection.InvokeAsync(hubMethod, message, _cancellationTokenSource.Token);
+            _logger.LogDebug("Сообщение {MessageType} отправлено на сервер ({HubMethod})", message.MessageType, hubMethod);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка отправки сообщения {MessageType} ({HubMethod})", message.MessageType, hubMethod);
+            return Result.Failure(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Отправка ответа на команду сервера: нет соединения или агент не зарегистрирован — просто выходим.
+    /// </summary>
+    private async Task<Result> TrySend(Message message, string hubMethod)
+    {
+        if (!CanSend(out var error))
+            return Result.Failure(error);
+
+        return await Send(message, hubMethod);
+    }
+
+    /// <summary>
+    /// В отличие от <see cref="TrySend"/> пытается перерегистрироваться: вызывающий код инициирует
+    /// отправку сам (по таймеру), поэтому не должен молча терять сообщение.
+    /// </summary>
+    private async Task<Result> SendWithReregistration(Message message, string hubMethod)
+    {
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            _logger.LogWarning("{Error}. HubMethod: {HubMethod}", NoConnectionError, hubMethod);
+            return Result.Failure(NoConnectionError);
+        }
+
+        return await Send(message, hubMethod);
+    }
+
+    /// <summary>
+    /// Общая проверка готовности соединения. Возвращает <c>false</c>, если отправлять нельзя.
+    /// </summary>
+    private bool CanSend(out string error)
+    {
+        error = string.Empty;
+
+        if (_connection == null || _connection.State != HubConnectionState.Connected)
+        {
+            error = NoConnectionError;
+            _logger.LogWarning(error);
+            return false;
+        }
+
+        if (_isRegistered)
+            return true;
+
+        error = NotRegisteredError;
+        _logger.LogWarning(error);
+        return false;
+    }
+
+    public async Task<Result> SendAgentState(AgentStateResponse agentState)
+    {
+        var result = await SendWithReregistration(agentState, "AgentStateMessage");
+        if (result.IsFailure)
+            return result;
+
+        _logger.LogDebug("Данные агента отправлены на сервер");
+        return Result.Success();
+    }
+
+    public async Task AskNewVersion()
+    {
+        var settings = await _parametersService.Current();
+
+        if (!settings.CentralServerSettings.DownloadNewVersion)
+            return;
+
+        await SendWithReregistration(
+            new NewVersionRequest { AgentInformation = BuildAgentData(settings) },
+            "NewVersionRequestMessage");
+    }
+
+    public async Task<Result> SendFrontolLogs(List<LogRecord> logs)
+    {
+        if (logs.Count == 0)
+        {
+            const string error = "Нет логов для отправки.";
+            _logger.LogDebug(error);
+            return Result.Failure(error);
+        }
+
+        return await SendWithReregistration(new FrontolLogsMessage { Logs = logs }, "FrontolLogMessage");
+    }
+
+    private async Task SendAgentLogs(AgentLogsResponse logs) =>
+        await TrySend(logs, "AgentLogs");
+
+    public async Task<Result> SendFrontolSettingsApplyingIsSuccess() =>
+        await TrySend(new FrontolSettingsApplyingState { Success = true }, "FrontolSettingsApplying");
+
+    public async Task RequestSalesCursor() =>
+        await TrySend(new SalesCursorRequest(), "SalesCursorRequest");
+
+    public async Task<Result> SendSalesDocuments(IReadOnlyList<SalesDocument> documents)
+    {
+        if (documents.Count == 0)
+            return Result.Success();
+
+        var result = await TrySend(
+            new SalesDocumentsMessage { Documents = documents.ToList() },
+            "SalesDocuments");
+
+        if (result.IsSuccess)
+            _logger.LogDebug("Отправлено чеков продаж: {Count}", documents.Count);
+
+        return result;
+    }
+
+    private async Task SendSalesDictionaryApplying(Result result) =>
+        await TrySend(
+            new SalesDictionaryApplyingState
+            {
+                Success = result.IsSuccess,
+                Message = result.IsFailure ? result.Error : string.Empty
+            },
+            "SalesDictionaryApplying");
+
+    private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<ReceiptList> result) =>
+        await TrySend(
+            new DeferredReceiptsResponse
+            {
+                Operation = operation,
+                Success = result.IsSuccess,
+                Error = result.IsFailure ? result.Error : string.Empty,
+                Receipts = result.IsSuccess ? result.Value.Receipts : [],
+                PaymentKinds = result.IsSuccess ? result.Value.PaymentKinds : [],
+                PrintGroups = result.IsSuccess ? result.Value.PrintGroups : []
+            },
+            "DeferredReceipts");
+
+    private async Task SendLicenseActivationResult(string licenseId, Result result) =>
+        await TrySend(
+            new LicenseActivationResponse
+            {
+                LicenseId = licenseId,
+                Success = result.IsSuccess,
+                Error = result.IsFailure ? result.Error : string.Empty
+            },
+            "LicenseActivation");
+
+    public async Task StopAsync()
+    {
+        await _cancellationTokenSource.CancelAsync();
+
+        if (_connection == null)
+            return;
+
+        await _connection.StopAsync();
+        await _connection.DisposeAsync();
+        _logger.LogInformation("Клиент SignalR остановлен");
+    }
+
+    // ---------------------------------------------------------------------
+    // Обработка команд сервера
+    // ---------------------------------------------------------------------
+
     private void OnAgentRegistered(string agentId)
     {
         _isRegistered = true;
         _logger.LogInformation("Агент успешно зарегистрирован на сервере. AgentId: {AgentId}", agentId);
     }
-    
-    private void OnReceiveMessage(string message)
-    {
-        _logger.LogInformation("Получено сообщение от сервера: {Message}", message);
-    }
 
-    private void OnNewVersionResponse(NewVersionResponse message) 
+    private void OnReceiveMessage(string message) =>
+        _logger.LogInformation("Получено сообщение от сервера: {Message}", message);
+
+    private void OnNewVersionResponse(NewVersionResponse message)
     {
-        _logger.LogInformation("Получена информация о обновлении от сервера: {message}", message);    
+        _logger.LogInformation("Получена информация о обновлении от сервера: {message}", message);
         _applicationState.NewVersionInformationUpdate(message);
     }
 
@@ -194,39 +408,11 @@ public class SignalRAgentClient
             return;
         }
 
-        const string methodName = "FrontolSettings";
-        
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
-            return;
-        }
-
-        if (!_isRegistered)
-        {
-            _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");
-            await RegisterAgentAsync();
-            return;
-        }
-
-        var answerMessage = new FrontolSettingsResponse()
-        {
-            AgentToken = _agentId,
-            MessageType = MessageType.FrontolSettings,
-            Settings = frontolSettings.Value
-        };
-        
-        try
-        {
-            await _connection.InvokeAsync(methodName, answerMessage, _cancellationTokenSource.Token);
-            _logger.LogDebug("Данные агента отправлены на сервер");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при отправке данных агента");
-        }
+        await TrySend(
+            new FrontolSettingsResponse { Settings = frontolSettings.Value },
+            "FrontolSettings");
     }
-    
+
     private async Task OnFrontolSettings(FrontolSettingsResponse message)
     {
         _logger.LogInformation("Получен пакет с настройками фронтола от сервера: {message}", message);
@@ -312,55 +498,27 @@ public class SignalRAgentClient
         await SendSalesDictionaryApplying(result);
     }
 
-    public async Task RequestSalesCursor()
+    private async Task OnAgentLogsRequest(AgentLogsRequest message)
     {
-        const string methodName = "SalesCursorRequest";
+        _logger.LogInformation("Получен запрос логов агента: {File}", message.SelectedLogFileName);
 
-        if (!CanSend(out _))
-            return;
+        AgentLogsResponse response;
 
         try
         {
-            var message = new SalesCursorRequest
-            {
-                AgentToken = _agentId
-            };
+            var logs = await _agentLogsService.Collect(message.SelectedLogFileName);
 
-            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
+            response = logs.IsSuccess
+                ? logs.Value
+                : new AgentLogsResponse { Success = false, Error = logs.Error };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка запроса курсора продаж");
+            _logger.LogError(ex, "Ошибка чтения логов агента");
+            response = new AgentLogsResponse { Success = false, Error = ex.Message };
         }
-    }
 
-    public async Task<Result> SendSalesDocuments(IReadOnlyList<SalesDocument> documents)
-    {
-        const string methodName = "SalesDocuments";
-
-        if (documents.Count == 0)
-            return Result.Success();
-
-        if (!CanSend(out var error))
-            return Result.Failure(error);
-
-        try
-        {
-            var message = new SalesDocumentsMessage
-            {
-                AgentToken = _agentId,
-                Documents = documents.ToList()
-            };
-
-            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-            _logger.LogDebug("Отправлено чеков продаж: {Count}", documents.Count);
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка отправки чеков продаж");
-            return Result.Failure(ex.Message);
-        }
+        await SendAgentLogs(response);
     }
 
     private async Task OnDeferredReceiptsRequest(DeferredReceiptsRequest message)
@@ -408,226 +566,6 @@ public class SignalRAgentClient
         return Result.Failure("Неизвестная операция с отложенным чеком");
     }
 
-    private static Result ToUnit<T>(Result<T> result) =>
-        result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
-    
-    public async Task StopAsync()
-    {
-        await _cancellationTokenSource.CancelAsync();
-
-        if (_connection == null)
-            return;
-        
-        await _connection.StopAsync();
-        await _connection.DisposeAsync();
-        _logger.LogInformation("Клиент SignalR остановлен");
-    }
-    
-    public async Task SendAgentState(AgentStateResponse agentStateResponse)
-    {
-        const string methodName = "AgentStateMessage";
-        
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
-            return;
-        }
-
-        if (!_isRegistered)
-        {
-            _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");
-            await RegisterAgentAsync();
-            return;
-        }
-
-        try
-        {
-            agentStateResponse.AgentToken = _agentId;
-
-            await _connection.InvokeAsync(methodName, agentStateResponse, _cancellationTokenSource.Token);
-            _logger.LogDebug("Данные агента отправлены на сервер");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при отправке данных агента");
-        }
-    }
-    
-    public async Task AskNewVersion()
-    {
-        const string methodName = "NewVersionRequestMessage";
-        
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            _logger.LogWarning("Невозможно отправить данные: соединение не установлено");
-            return;
-        }
-
-        var settings = await _parametersService.Current();
-            
-        if (!settings.CentralServerSettings.DownloadNewVersion)
-            return;
-
-        if (!_isRegistered)
-        {
-            _logger.LogWarning("Агент не зарегистрирован. Попытка повторной регистрации...");
-            await RegisterAgentAsync();
-            return;
-        }
-
-        NewVersionRequest message = new()
-        {
-            AgentToken = _agentId,
-            AgentInformation = BuildAgentData(settings)
-        };
-        
-        try
-        {
-            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при отправке данных агента");
-        }
-    }
-
-    public async Task<Result> SendFrontolLogs(List<LogRecord> logs)
-    {
-        const string methodName = "FrontolLogMessage";
-
-        if (logs.Count == 0)
-        {
-            const string err = "Нет логов для отправки.";
-            _logger.LogDebug(err);
-            return Result.Failure(err);
-        }    
-        
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            const string err = "Невозможно отправить данные: соединение не установлено";
-            _logger.LogWarning(err);
-            return Result.Failure(err);
-        }
-
-        if (!_isRegistered)
-        {
-            const string err = "Агент не зарегистрирован. Попытка повторной регистрации...";
-            _logger.LogWarning(err);
-            await RegisterAgentAsync();
-            
-            return  Result.Failure(err);
-        }
-
-        try
-        {
-            FrontolLogsMessage message = new()
-            {
-                AgentToken = _agentId,
-                Logs = logs
-            };
-
-            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-            _logger.LogDebug("Данные логов отправлены на сервер");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при отправке логов");
-        }
-        
-        return Result.Success();
-    }
-
-    public async Task<Result> SendFrontolSettingsApplyingIsSuccess()
-    {
-        const string methodName = "FrontolSettingsApplying";
-
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            const string err = "Невозможно отправить данные: соединение не установлено";
-            _logger.LogWarning(err);
-            return Result.Failure(err);
-        }
-
-        if (!_isRegistered)
-        {
-            const string err = "Агент не зарегистрирован. Попытка повторной регистрации...";
-            _logger.LogWarning(err);
-            await RegisterAgentAsync();
-
-            return Result.Failure(err);
-        }
-
-        try
-        {
-            FrontolSettingsApplyingState message = new()
-            {
-                AgentToken = _agentId,
-                Success = true
-            };
-
-            await _connection.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-            _logger.LogDebug("Данные логов отправлены на сервер");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при отправке логов");
-        }
-
-        return Result.Success();
-    }
-
-    private async Task SendSalesDictionaryApplying(Result result)
-    {
-        const string methodName = "SalesDictionaryApplying";
-
-        if (!CanSend(out _))
-            return;
-
-        try
-        {
-            var message = new SalesDictionaryApplyingState
-            {
-                AgentToken = _agentId,
-                Success = result.IsSuccess,
-                Message = result.IsFailure ? result.Error : string.Empty
-            };
-
-            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка отправки результата справочника");
-        }
-    }
-
-    private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<ReceiptList> result)
-    {
-        const string methodName = "DeferredReceipts";
-
-        if (!CanSend(out _))
-            return;
-
-        try
-        {
-            var message = new DeferredReceiptsResponse
-            {
-                AgentToken = _agentId,
-                Operation = operation,
-                Success = result.IsSuccess,
-                Error = result.IsFailure ? result.Error : string.Empty,
-                Receipts = result.IsSuccess ? result.Value.Receipts : [],
-                PaymentKinds = result.IsSuccess ? result.Value.PaymentKinds : [],
-                PrintGroups = result.IsSuccess ? result.Value.PrintGroups : []
-            };
-
-            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка отправки отложенных чеков");
-        }
-    }
-
     private async Task OnLicenseActivationRequest(LicenseActivationRequest message)
     {
         _logger.LogInformation("Получена команда активации лицензии {LicenseId}", message.LicenseId);
@@ -650,47 +588,6 @@ public class SignalRAgentClient
         await SendLicenseActivationResult(message.LicenseId, result);
     }
 
-    private async Task SendLicenseActivationResult(string licenseId, Result result)
-    {
-        const string methodName = "LicenseActivation";
-
-        if (!CanSend(out _))
-            return;
-
-        try
-        {
-            var message = new LicenseActivationResponse
-            {
-                AgentToken = _agentId,
-                LicenseId = licenseId,
-                Success = result.IsSuccess,
-                Error = result.IsFailure ? result.Error : string.Empty
-            };
-
-            await _connection!.InvokeAsync(methodName, message, _cancellationTokenSource.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка отправки результата активации лицензии");
-        }
-    }
-
-    private bool CanSend(out string error)
-    {
-        error = string.Empty;
-
-        if (_connection == null || _connection.State != HubConnectionState.Connected)
-        {
-            error = "Невозможно отправить данные: соединение не установлено";
-            _logger.LogWarning(error);
-            return false;
-        }
-
-        if (_isRegistered)
-            return true;
-
-        error = "Агент не зарегистрирован";
-        _logger.LogWarning(error);
-        return false;
-    }
+    private static Result ToUnit<T>(Result<T> result) =>
+        result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
 }
