@@ -1,6 +1,11 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Reflection;
 using FrontolDatabase.Entitys;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Logging;
 
 namespace FrontolDatabase;
 
@@ -25,11 +30,21 @@ public class MainDbCtx : DbContext
     public DbSet<BarCode>? BarCodes { get; set; }
     public DbSet<TaxGroup>? TaxGroups { get; set; }
     
-    private readonly string _connectionString = string.Empty;   
-    
+    private readonly string _connectionString = string.Empty;
+    private readonly FrontolSchema _schema = FrontolSchema.Unknown;
+
+    /// <summary>Фактическая схема подключённой базы (таблицы и колонки, которые в ней есть).</summary>
+    public FrontolSchema Schema => _schema;
+
     public MainDbCtx(DbContextOptions<MainDbCtx> options)
-        : base(options)
+        : this(options, FrontolSchema.Unknown)
     {}
+
+    public MainDbCtx(DbContextOptions<MainDbCtx> options, FrontolSchema schema)
+        : base(options)
+    {
+        _schema = schema;
+    }
 
     public MainDbCtx(string connectionString)
     {
@@ -192,6 +207,87 @@ public class MainDbCtx : DbContext
 
         modelBuilder.Entity<TaxGroup>()
             .HasKey(k => k.Id);
+
+        // Обязательно последним: убирает из модели всё, чего нет в подключённой базе.
+        ExcludeMissingSchemaParts(modelBuilder);
     }
 
+    /// <summary>
+    /// Старая база Frontol может не содержать части таблиц и колонок, которые ожидает модель,
+    /// и Firebird падает уже на подготовке запроса ("SQL error code = -206 Column unknown").
+    /// Поэтому таблицы, которых нет в базе, тихо исключаются из модели (с записью в лог),
+    /// а отсутствующие колонки — из сущности; такое свойство остаётся значением по умолчанию.
+    /// </summary>
+    private void ExcludeMissingSchemaParts(ModelBuilder modelBuilder)
+    {
+        var logger = this.GetService<ILoggerFactory>().CreateLogger<MainDbCtx>();
+
+        if (!Schema.IsKnown)
+        {
+            logger.LogInformation("Схема базы Frontol не определена — модель строится без учёта отсутствующих таблиц и колонок");
+            return;
+        }
+
+        // Список типов материализуется заранее: дальше модель мутирует (Ignore) прямо во время обхода.
+        foreach (var type in ModelEntityTypes(modelBuilder).ToList())
+        {
+            var entityType = modelBuilder.Entity(type).Metadata;
+
+            if (entityType.GetTableName() is not { } table)
+                continue;
+
+            if (!Schema.HasTable(table))
+            {
+                logger.LogWarning("В базе Frontol нет таблицы {Table} — сущность {Entity} исключена из модели",
+                    table, type.Name);
+
+                modelBuilder.Ignore(type);
+                continue;
+            }
+
+            var storeObject = StoreObjectIdentifier.Table(table, entityType.GetSchema());
+
+            var keyColumns = (entityType.FindPrimaryKey()?.Properties ?? [])
+                .Select(property => ColumnName(property, storeObject))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var property in entityType.GetProperties().ToList())
+            {
+                var column = ColumnName(property, storeObject);
+
+                if (Schema.HasColumn(table, column))
+                    continue;
+
+                if (keyColumns.Contains(column))
+                {
+                    logger.LogWarning("В базе Frontol нет ключевой колонки {Table}.{Column} — сущность {Entity} исключена из модели",
+                        table, column, type.Name);
+
+                    modelBuilder.Ignore(type);
+                    break;
+                }
+
+                logger.LogWarning("В базе Frontol нет колонки {Table}.{Column} — свойство {Entity}.{Property} исключено из модели и остаётся значением по умолчанию",
+                    table, column, type.Name, property.Name);
+
+                modelBuilder.Entity(type).Ignore(property.Name);
+            }
+        }
+    }
+
+    /// <summary>Типы, которые нужно проверить: уже добавленные в модель и объявленные как DbSet.</summary>
+    private IEnumerable<Type> ModelEntityTypes(ModelBuilder modelBuilder)
+        => modelBuilder.Model.GetEntityTypes()
+            .Select(entityType => entityType.ClrType)
+            .ToList()
+            .Concat(GetType().GetProperties()
+                .Where(property => property.PropertyType.IsGenericType
+                                   && property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+                .Select(property => property.PropertyType.GetGenericArguments()[0]))
+            .Distinct();
+
+    private static string ColumnName(IReadOnlyProperty property, StoreObjectIdentifier storeObject)
+        => property.GetColumnName(storeObject)
+           ?? property.PropertyInfo?.GetCustomAttribute<ColumnAttribute>()?.Name
+           ?? property.Name;
 }

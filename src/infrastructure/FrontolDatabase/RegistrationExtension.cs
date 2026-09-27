@@ -1,9 +1,10 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Domain.Configuration.Options;
 using Domain.Frontol.Interfaces;
 using FrontolDatabase.Repositories;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Shared.DI.Attributes;
 
@@ -37,9 +38,12 @@ namespace FrontolDatabase
             }
             
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
-            
-            services.AddDbContext<MainDbCtx>(options =>
-                options.UseFirebird(connectionString));
+
+            services.AddSingleton(ReadSchema(connectionString));
+
+            services.AddDbContext<MainDbCtx>(options => options
+                .UseFirebird(connectionString)
+                .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>());
             
             services.AddScoped<IFrontolMainDb, MainDbRepository>();
             services.AddScoped<IFrontolSettings, SettingsRepository>();
@@ -73,6 +77,22 @@ namespace FrontolDatabase
             
             services.AddScoped<IFrontolLog, LogRepository>();            
             return services;
+        }
+
+        /// <summary>
+        /// Схема нужна до построения модели EF. Если база в момент старта недоступна,
+        /// не мешаем приложению подняться: модель будет построена как раньше.
+        /// </summary>
+        private static FrontolSchema ReadSchema(string connectionString)
+        {
+            try
+            {
+                return FrontolSchema.Read(connectionString);
+            }
+            catch (Exception)
+            {
+                return FrontolSchema.Unknown;
+            }
         }
         
     }
