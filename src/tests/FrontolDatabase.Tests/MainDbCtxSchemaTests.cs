@@ -78,15 +78,17 @@ public class MainDbCtxSchemaTests
     }
 
     [Test]
-    public void Отсутствующая_таблица_оставляет_DbSet_недоступным()
+    public void DbSet_отсутствующей_таблицы_не_отдаётся()
     {
         using var ctx = Context(FrontolSchema.ForTests(ProfileColumns));
 
-        Assert.That(ctx.Settings, Is.Null, $"Settings = {ctx.Settings}");
+        Assert.That(ctx.Settings, Is.Null,
+            "Репозитории проверяют _ctx.Settings == null и вернут понятный отказ без обращения к базе");
+        Assert.That(ctx.UserProfiles, Is.Not.Null);
     }
 
     [Test]
-    public void Запрос_к_отсутствующей_таблице_падает_понятной_ошибкой()
+    public void Обращение_к_отсутствующей_таблице_падает_понятной_ошибкой()
     {
         using var ctx = Context(FrontolSchema.ForTests(ProfileColumns));
 

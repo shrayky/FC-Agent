@@ -11,24 +11,51 @@ namespace FrontolDatabase;
 
 public class MainDbCtx : DbContext
 {
-    public DbSet<CustomDb>? CustomDb { get; set; }
-    public DbSet<Settings>? Settings { get; set; }
-    public DbSet<Profile>? UserProfiles { get; set; }
-    public DbSet<User>? Users { get; set; }
-    public DbSet<Security>? UserProfileSecurity { get; set; }
-    public DbSet<ActScript>? ActionScripts {  get; set; }
-    public DbSet<Devices>? Devices { get; set; }
-    public DbSet<Document>? Documents { get; set; }
-    public DbSet<DocKind>? DocKinds { get; set; }
-    public DbSet<TranzT>? Transactions { get; set; }
-    public DbSet<Payment>? Payments { get; set; }
-    public DbSet<SprT>? Wares { get; set; }
-    public DbSet<PrintGroup>? PrintGroups { get; set; }
-    public DbSet<Remain>? Remains { get; set; }
-    public DbSet<RemainD>? RemainDs { get; set; }
-    public DbSet<PriceData>? PriceDatas { get; set; }
-    public DbSet<BarCode>? BarCodes { get; set; }
-    public DbSet<TaxGroup>? TaxGroups { get; set; }
+    private DbSet<CustomDb>? _customDb;
+    private DbSet<Settings>? _settings;
+    private DbSet<Profile>? _userProfiles;
+    private DbSet<User>? _users;
+    private DbSet<Security>? _userProfileSecurity;
+    private DbSet<ActScript>? _actionScripts;
+    private DbSet<Devices>? _devices;
+    private DbSet<Document>? _documents;
+    private DbSet<DocKind>? _docKinds;
+    private DbSet<TranzT>? _transactions;
+    private DbSet<Payment>? _payments;
+    private DbSet<SprT>? _wares;
+    private DbSet<PrintGroup>? _printGroups;
+    private DbSet<Remain>? _remains;
+    private DbSet<RemainD>? _remainDs;
+    private DbSet<PriceData>? _priceDatas;
+    private DbSet<BarCode>? _barCodes;
+    private DbSet<TaxGroup>? _taxGroups;
+
+    public DbSet<CustomDb>? CustomDb { get => Available(_customDb); set => _customDb = value; }
+    public DbSet<Settings>? Settings { get => Available(_settings); set => _settings = value; }
+    public DbSet<Profile>? UserProfiles { get => Available(_userProfiles); set => _userProfiles = value; }
+    public DbSet<User>? Users { get => Available(_users); set => _users = value; }
+    public DbSet<Security>? UserProfileSecurity { get => Available(_userProfileSecurity); set => _userProfileSecurity = value; }
+    public DbSet<ActScript>? ActionScripts { get => Available(_actionScripts); set => _actionScripts = value; }
+    public DbSet<Devices>? Devices { get => Available(_devices); set => _devices = value; }
+    public DbSet<Document>? Documents { get => Available(_documents); set => _documents = value; }
+    public DbSet<DocKind>? DocKinds { get => Available(_docKinds); set => _docKinds = value; }
+    public DbSet<TranzT>? Transactions { get => Available(_transactions); set => _transactions = value; }
+    public DbSet<Payment>? Payments { get => Available(_payments); set => _payments = value; }
+    public DbSet<SprT>? Wares { get => Available(_wares); set => _wares = value; }
+    public DbSet<PrintGroup>? PrintGroups { get => Available(_printGroups); set => _printGroups = value; }
+    public DbSet<Remain>? Remains { get => Available(_remains); set => _remains = value; }
+    public DbSet<RemainD>? RemainDs { get => Available(_remainDs); set => _remainDs = value; }
+    public DbSet<PriceData>? PriceDatas { get => Available(_priceDatas); set => _priceDatas = value; }
+    public DbSet<BarCode>? BarCodes { get => Available(_barCodes); set => _barCodes = value; }
+    public DbSet<TaxGroup>? TaxGroups { get => Available(_taxGroups); set => _taxGroups = value; }
+
+    /// <summary>
+    /// Сущности, которой нет в подключённой базе (нет таблицы), DbSet не отдаём:
+    /// репозитории проверяют свойство на null и вернут понятный отказ вместо обращения
+    /// к несуществующей таблице.
+    /// </summary>
+    private DbSet<TEntity>? Available<TEntity>(DbSet<TEntity>? set) where TEntity : class
+        => set is null || Model.FindEntityType(typeof(TEntity)) is not null ? set : null;
     
     private readonly string _connectionString = string.Empty;
     private readonly FrontolSchema _schema = FrontolSchema.Unknown;
