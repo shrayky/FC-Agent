@@ -12,7 +12,8 @@ public static class DriverAto10lLogsSizeReader
         try
         {
             var directories = DriverAto10lLogsDirectory.List(
-                DriverAto10lLogsDirectory.UsersRoot,
+                DriverAto10lLogsDirectory.ProfilesDirectory,
+                DriverAto10lLogsDirectory.DefaultUsersRoot,
                 Directory.Exists);
 
             // Без сообщений об ошибке отказ доступа к профилю кассира неотличим от «логов нет».

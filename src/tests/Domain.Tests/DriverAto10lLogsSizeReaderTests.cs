@@ -148,12 +148,74 @@ public class DriverAto10lLogsSizeReaderTests
         Directory.CreateDirectory(Path.Combine(usersRoot, "Default"));
         Directory.CreateDirectory(Path.Combine(usersRoot, "Public"));
 
-        var directories = DriverAto10lLogsDirectory.List(() => usersRoot, existing.Contains);
+        var directories = DriverAto10lLogsDirectory.List(() => usersRoot, () => usersRoot, existing.Contains);
 
         Assert.That(directories, Is.EqualTo(new[]
         {
             Path.Combine(usersRoot, "cashier1", DriverAto10lLogsDirectory.RelativePath),
             Path.Combine(usersRoot, "cashier2", DriverAto10lLogsDirectory.RelativePath)
+        }));
+    }
+
+    /// <summary>
+    /// Под LocalSystem берётся реестровый каталог профилей, а не профиль службы.
+    /// </summary>
+    [Test]
+    public void List_берёт_реестровый_каталог_профилей()
+    {
+        var usersRoot = Path.Combine(_root, "Users");
+        var systemProfile = Path.Combine(_root, "Windows", "system32", "config", "systemprofile");
+        Directory.CreateDirectory(Path.Combine(usersRoot, "cashier1"));
+
+        var directories = DriverAto10lLogsDirectory.List(
+            () => usersRoot,
+            () => Path.GetDirectoryName(systemProfile),
+            _ => true);
+
+        Assert.That(directories, Is.EqualTo(new[]
+        {
+            Path.Combine(usersRoot, "cashier1", DriverAto10lLogsDirectory.RelativePath)
+        }));
+    }
+
+    /// <summary>
+    /// Реестр недоступен — используется стандартный каталог профилей.
+    /// </summary>
+    [Test]
+    public void List_берёт_запасной_каталог_профилей()
+    {
+        var usersRoot = Path.Combine(_root, "Users");
+        Directory.CreateDirectory(Path.Combine(usersRoot, "cashier1"));
+
+        var directories = DriverAto10lLogsDirectory.List(() => null, () => usersRoot, _ => true);
+
+        Assert.That(directories, Is.EqualTo(new[]
+        {
+            Path.Combine(usersRoot, "cashier1", DriverAto10lLogsDirectory.RelativePath)
+        }));
+    }
+
+    /// <summary>
+    /// Локализованные junction'ы («Все пользователи») тоже не считаются профилями.
+    /// </summary>
+    [Test]
+    public void List_пропускает_локализованные_служебные_каталоги()
+    {
+        var usersRoot = Path.Combine(_root, "Users");
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            Path.Combine(usersRoot, "cashier1", DriverAto10lLogsDirectory.RelativePath),
+            Path.Combine(usersRoot, "Все пользователи", DriverAto10lLogsDirectory.RelativePath)
+        };
+
+        Directory.CreateDirectory(Path.Combine(usersRoot, "cashier1"));
+        Directory.CreateDirectory(Path.Combine(usersRoot, "Все пользователи"));
+
+        var directories = DriverAto10lLogsDirectory.List(() => usersRoot, () => usersRoot, existing.Contains);
+
+        Assert.That(directories, Is.EqualTo(new[]
+        {
+            Path.Combine(usersRoot, "cashier1", DriverAto10lLogsDirectory.RelativePath)
         }));
     }
 
@@ -166,7 +228,7 @@ public class DriverAto10lLogsSizeReaderTests
         var usersRoot = Path.Combine(_root, "Users");
         Directory.CreateDirectory(Path.Combine(usersRoot, "cashier1"));
 
-        Assert.That(DriverAto10lLogsDirectory.List(() => usersRoot, _ => false), Is.Empty);
+        Assert.That(DriverAto10lLogsDirectory.List(() => usersRoot, () => usersRoot, _ => false), Is.Empty);
     }
 
     /// <summary>
@@ -177,7 +239,7 @@ public class DriverAto10lLogsSizeReaderTests
     {
         var missing = Path.Combine(_root, "Users");
 
-        Assert.That(DriverAto10lLogsDirectory.List(() => missing, _ => true), Is.Empty);
+        Assert.That(DriverAto10lLogsDirectory.List(() => missing, () => missing, _ => true), Is.Empty);
     }
 
     /// <summary>
@@ -189,7 +251,7 @@ public class DriverAto10lLogsSizeReaderTests
         var usersRoot = Path.Combine(_root, "Users");
         Directory.CreateDirectory(Path.Combine(usersRoot, "cashier"));
 
-        var directories = DriverAto10lLogsDirectory.List(() => usersRoot, _ => true);
+        var directories = DriverAto10lLogsDirectory.List(() => usersRoot, () => usersRoot, _ => true);
 
         Assert.That(directories, Is.EqualTo(new[]
         {
