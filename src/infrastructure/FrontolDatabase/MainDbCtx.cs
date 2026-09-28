@@ -58,24 +58,35 @@ public class MainDbCtx : DbContext
         => set is null || Model.FindEntityType(typeof(TEntity)) is not null ? set : null;
     
     private readonly string _connectionString = string.Empty;
-    private readonly FrontolSchema _schema = FrontolSchema.Unknown;
+    private readonly FrontolSchemaProvider _schemaProvider;
+    private FrontolSchema? _schema;
 
-    /// <summary>Фактическая схема подключённой базы (таблицы и колонки, которые в ней есть).</summary>
-    public FrontolSchema Schema => _schema;
+    /// <summary>
+    /// Фактическая схема подключённой базы (таблицы и колонки, которые в ней есть).
+    /// При первом обращении читается из системного каталога и кешируется на процесс.
+    /// </summary>
+    public FrontolSchema Schema => _schema ??= _schemaProvider.Get(_connectionString);
 
     public MainDbCtx(DbContextOptions<MainDbCtx> options)
-        : this(options, FrontolSchema.Unknown)
+        : this(options, null)
     {}
 
-    public MainDbCtx(DbContextOptions<MainDbCtx> options, FrontolSchema schema)
+    public MainDbCtx(DbContextOptions<MainDbCtx> options, FrontolSchemaProvider? schemaProvider)
         : base(options)
     {
-        _schema = schema;
+        _schemaProvider = schemaProvider ?? FrontolSchemaProvider.Shared;
+
+        // Строку подключения берём из options напрямую: обращение к Database здесь (и при построении
+        // модели) недопустимо — это тянет за собой создаваемую модель и падает рекурсией.
+        _connectionString = options.Extensions
+            .OfType<RelationalOptionsExtension>()
+            .FirstOrDefault()?.ConnectionString ?? string.Empty;
     }
 
     public MainDbCtx(string connectionString)
     {
         _connectionString = connectionString;
+        _schemaProvider = FrontolSchemaProvider.Shared;
     }
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -251,9 +262,16 @@ public class MainDbCtx : DbContext
 
         if (!Schema.IsKnown)
         {
-            logger.LogInformation("Схема базы Frontol не определена — модель строится без учёта отсутствующих таблиц и колонок");
+            if (Schema.ReadError is { } error)
+                logger.LogWarning("Схема базы Frontol не прочитана ({Error}) — модель строится без учёта отсутствующих таблиц и колонок", error);
+            else
+                logger.LogInformation("Схема базы Frontol не определена — модель строится без учёта отсутствующих таблиц и колонок");
+
             return;
         }
+
+        logger.LogInformation("Схема базы Frontol прочитана: таблиц {Tables}, колонок {Columns}",
+            Schema.TableCount, Schema.ColumnCount);
 
         // Список типов материализуется заранее: дальше модель мутирует (Ignore) прямо во время обхода.
         foreach (var type in ModelEntityTypes(modelBuilder).ToList())

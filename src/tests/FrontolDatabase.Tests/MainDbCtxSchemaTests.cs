@@ -26,22 +26,26 @@ public class MainDbCtxSchemaTests
     ];
 
     private static MainDbCtx Context(FrontolSchema schema)
+        => Context(new FrontolSchemaProvider(schema));
+
+    private static MainDbCtx Context(FrontolSchemaProvider schemaProvider)
     {
         var options = new DbContextOptionsBuilder<MainDbCtx>()
             .UseFirebird(ConnectionString)
             .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>()
             .Options;
 
-        return new MainDbCtx(options, schema);
+        return new MainDbCtx(options, schemaProvider);
     }
+
+    private static (string Table, string Column)[] WithoutColumn(string column)
+        => ProfileColumns.Where(profileColumn => profileColumn.Column != column).ToArray();
 
     [Test]
     public void Отсутствующая_колонка_исключается_из_модели()
     {
         // PROFILE старой версии: без FRONTOLSELFIE.
-        var withoutSelfie = ProfileColumns.Where(column => column.Column != "FRONTOLSELFIE").ToArray();
-
-        using var ctx = Context(FrontolSchema.ForTests(withoutSelfie));
+        using var ctx = Context(FrontolSchema.ForTests(WithoutColumn("FRONTOLSELFIE")));
         ctx.UserProfiles = ctx.Set<Profile>();
 
         var profile = ctx.Model.FindEntityType(typeof(Profile));
@@ -56,9 +60,7 @@ public class MainDbCtxSchemaTests
     [Test]
     public void Sql_запроса_не_содержит_отсутствующей_колонки()
     {
-        var withoutSelfie = ProfileColumns.Where(column => column.Column != "FRONTOLSELFIE").ToArray();
-
-        using var ctx = Context(FrontolSchema.ForTests(withoutSelfie));
+        using var ctx = Context(FrontolSchema.ForTests(WithoutColumn("FRONTOLSELFIE")));
         ctx.UserProfiles = ctx.Set<Profile>();
 
         var sql = ctx.UserProfiles!.ToQueryString();
@@ -101,9 +103,7 @@ public class MainDbCtxSchemaTests
     public void Отсутствующая_ключевая_колонка_исключает_сущность_из_модели()
     {
         // Ключевой колонке значение по умолчанию не подставишь — таблица для нас бесполезна.
-        var withoutId = ProfileColumns.Where(column => column.Column != "ID").ToArray();
-
-        using var ctx = Context(FrontolSchema.ForTests(withoutId));
+        using var ctx = Context(FrontolSchema.ForTests(WithoutColumn("ID")));
 
         Assert.That(ctx.Model.FindEntityType(typeof(Profile)), Is.Null);
     }
@@ -120,9 +120,7 @@ public class MainDbCtxSchemaTests
     [Test]
     public void Модель_не_переиспользуется_для_баз_с_разной_схемой()
     {
-        using var oldBase = Context(FrontolSchema.ForTests(
-            ProfileColumns.Where(column => column.Column != "FRONTOLSELFIE").ToArray()));
-
+        using var oldBase = Context(FrontolSchema.ForTests(WithoutColumn("FRONTOLSELFIE")));
         using var newBase = Context(FrontolSchema.ForTests(ProfileColumns));
 
         Assert.That(oldBase.Model, Is.Not.SameAs(newBase.Model));
@@ -133,9 +131,7 @@ public class MainDbCtxSchemaTests
     [Test]
     public void Игнорируемое_свойство_остаётся_значением_по_умолчанию()
     {
-        var withoutSelfie = ProfileColumns.Where(column => column.Column != "FRONTOLSELFIE").ToArray();
-
-        using var ctx = Context(FrontolSchema.ForTests(withoutSelfie));
+        using var ctx = Context(FrontolSchema.ForTests(WithoutColumn("FRONTOLSELFIE")));
         ctx.UserProfiles = ctx.Set<Profile>();
 
         var profile = new Profile { ForSelfieUser = true, Name = "Кассир" };
@@ -150,33 +146,65 @@ public class MainDbCtxSchemaTests
     }
 
     [Test]
+    public void Непрочитанная_схема_не_ломает_модель_и_попадает_в_лог()
+    {
+        // Провайдер без заранее заданной схемы: чтение пойдёт по строке подключения контекста
+        // и провалится — модель должна остаться «как раньше», а причина попасть в лог.
+        var (ctx, captured) = DiContext(services => services.AddSingleton<FrontolSchemaProvider>());
+
+        try
+        {
+            _ = ctx.Model;
+
+            Assert.That(ctx.Schema.IsKnown, Is.False);
+            Assert.That(ctx.Schema.ReadError, Is.Not.Null);
+            Assert.That(ctx.Model.FindEntityType(typeof(Profile))!.FindProperty(nameof(Profile.ForSelfieUser)), Is.Not.Null);
+            Assert.That(captured.Messages, Has.Some.Contains("Схема базы Frontol не прочитана"));
+        }
+        finally
+        {
+            ctx.Dispose();
+        }
+    }
+
+    [Test]
     public void В_реальном_DI_несовместимость_базы_попадает_в_лог()
+    {
+        // Отдельный набор колонок, чтобы модель гарантированно строилась заново (а не бралась из кеша EF).
+        var schema = FrontolSchema.ForTests(
+            WithoutColumn("FRONTOLSELFIE").Append(("PROFILE", "DI_MARKER")).ToArray());
+
+        var (ctx, captured) = DiContext(services => services.AddSingleton(new FrontolSchemaProvider(schema)));
+
+        try
+        {
+            _ = ctx.Model;
+
+            Assert.That(ctx.Schema.IsKnown, Is.True, "Схема должна попадать в контекст через DI");
+            Assert.That(captured.Messages, Has.Some.Contains("PROFILE.FRONTOLSELFIE"));
+            Assert.That(captured.Messages, Has.Some.Contains("TAXGROUP"));
+        }
+        finally
+        {
+            ctx.Dispose();
+        }
+    }
+
+    private static (MainDbCtx Context, CapturingLoggerProvider Log) DiContext(Action<ServiceCollection> configure)
     {
         var captured = new CapturingLoggerProvider();
 
-        // Отдельный набор колонок, чтобы модель гарантированно строилась заново (а не бралась из кеша EF).
-        var schema = FrontolSchema.ForTests(
-            ProfileColumns
-                .Where(column => column.Column != "FRONTOLSELFIE")
-                .Append(("PROFILE", "DI_MARKER"))
-                .ToArray());
-
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddProvider(captured));
-        services.AddSingleton(schema);
+        configure(services);
         services.AddDbContext<MainDbCtx>(options => options
             .UseFirebird(ConnectionString)
             .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>());
 
-        using var provider = services.BuildServiceProvider();
-        using var scope = provider.CreateScope();
+        var provider = services.BuildServiceProvider();
+        var scope = provider.CreateScope();
 
-        var ctx = scope.ServiceProvider.GetRequiredService<MainDbCtx>();
-        _ = ctx.Model;
-
-        Assert.That(ctx.Schema.IsKnown, Is.True, "Схема должна попадать в контекст через DI");
-        Assert.That(captured.Messages, Has.Some.Contains("PROFILE.FRONTOLSELFIE"));
-        Assert.That(captured.Messages, Has.Some.Contains("TAXGROUP"));
+        return (scope.ServiceProvider.GetRequiredService<MainDbCtx>(), captured);
     }
 
     private sealed class CapturingLoggerProvider : ILoggerProvider

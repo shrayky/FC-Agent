@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models.Settings;
 using FrontolDatabase.Entitys;
@@ -29,20 +29,22 @@ public class ActionScriptRepository : IFrontolActionScripts
         if (_ctx.ActionScripts == null)
             return Result.Failure<ActionScript>("База данных ActionScripts недоступна");
 
-        var scritSetting = await _settings.GetSetting(ScriptSettingName);
+        var scriptSetting = await _settings.GetSetting(ScriptSettingName);
 
-        if (scritSetting.IsFailure)
+        // В базе строки StartScript может не быть — это значит «скрипт не задан»,
+        // а не ошибка подключения к базе.
+        if (scriptSetting.IsFailure)
         {
-            _logger.LogError(scritSetting.Error);
-            return Result.Failure<ActionScript>(scritSetting.Error);
+            _logger.LogDebug("Настройка {name} не найдена в таблице SETTINGS — стартовый скрипт считается незаданным",
+                ScriptSettingName);
+
+            return Result.Success(new ActionScript());
         }
 
-        int scriptCode = int.Parse(scritSetting.Value);
+        if (!int.TryParse(scriptSetting.Value, out var scriptCode) || scriptCode == 0)
+            return Result.Success(new ActionScript());
 
         var answer = new ActionScript();
-
-        if (scriptCode == 0)
-           return Result.Success(answer);
 
         var entity = await _ctx.ActionScripts.AsNoTracking().FirstOrDefaultAsync(p => p.Code == scriptCode);
 

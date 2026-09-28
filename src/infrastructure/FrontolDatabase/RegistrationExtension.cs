@@ -39,7 +39,7 @@ namespace FrontolDatabase
             
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
 
-            services.AddSingleton(ReadSchema(connectionString));
+            services.AddSingleton<FrontolSchemaProvider>();
 
             services.AddDbContext<MainDbCtx>(options => options
                 .UseFirebird(connectionString)
@@ -77,22 +77,6 @@ namespace FrontolDatabase
             
             services.AddScoped<IFrontolLog, LogRepository>();            
             return services;
-        }
-
-        /// <summary>
-        /// Схема нужна до построения модели EF. Если база в момент старта недоступна,
-        /// не мешаем приложению подняться: модель будет построена как раньше.
-        /// </summary>
-        private static FrontolSchema ReadSchema(string connectionString)
-        {
-            try
-            {
-                return FrontolSchema.Read(connectionString);
-            }
-            catch (Exception)
-            {
-                return FrontolSchema.Unknown;
-            }
         }
         
     }

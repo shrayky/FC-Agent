@@ -3,6 +3,7 @@ using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Metadata;
 using Domain.Frontol.Models.Settings;
+using FrontolDatabase.Entitys;
 using FrontolDatabase.Mapping;
 using FrontolDatabase.Parsers;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,13 @@ public class SettingsRepository: IFrontolSettings
 {
     private readonly ILogger<SettingsRepository> _logger;
     private readonly MainDbCtx _ctx;
+    private readonly IFrontolMainDb _mainDb;
 
-    public SettingsRepository(ILogger<SettingsRepository> logger, MainDbCtx ctx)
+    public SettingsRepository(ILogger<SettingsRepository> logger, MainDbCtx ctx, IFrontolMainDb mainDb)
     {
         _logger = logger;
         _ctx = ctx;
+        _mainDb = mainDb;
     }
 
     public async Task<Result> LoadGlobalControlConfig(GlobalControl globalControl)
@@ -83,7 +86,24 @@ public class SettingsRepository: IFrontolSettings
         var setting = await _ctx.Settings.FirstOrDefaultAsync(s => s.Name == name);
 
         if (setting == null)
-            return Result.Failure($"Не удалось установть настройку {name} - не найдена в БД");
+        {
+            // Старая база Frontol может не содержать строки настройки: без неё значение
+            // (например, код стартового скрипта) сохранить некуда — создаём её.
+            var newId = await _mainDb.NextChangeId();
+
+            setting = new Settings
+            {
+                Id = newId,
+                Name = name,
+                Value = value
+            };
+
+            await _ctx.Settings.AddAsync(setting);
+
+            _logger.LogWarning("Настройка {name} не найдена в таблице SETTINGS — создана со значением {value}", name, value);
+
+            return Result.Success();
+        }
 
         setting.Value = value;
 

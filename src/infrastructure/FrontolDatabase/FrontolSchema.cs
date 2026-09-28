@@ -13,18 +13,28 @@ public sealed class FrontolSchema
 {
     private readonly Dictionary<string, HashSet<string>> _columns;
 
-    private FrontolSchema(Dictionary<string, HashSet<string>> columns, string fingerprint)
+    private FrontolSchema(
+        Dictionary<string, HashSet<string>> columns,
+        string fingerprint,
+        bool isKnown,
+        string? readError,
+        DateTime resolvedAt)
     {
         _columns = columns;
         Fingerprint = fingerprint;
+        IsKnown = isKnown;
+        ReadError = readError;
+        ResolvedAt = resolvedAt;
+        ColumnCount = columns.Sum(pair => pair.Value.Count);
     }
 
     /// <summary>
-    /// Схему прочитать не удалось (например, база была недоступна при старте):
-    /// считаем, что все таблицы и колонки на месте — поведение как до появления проверки схемы.
+    /// Схема не читалась: считаем, что все таблицы и колонки на месте — поведение
+    /// как до появления проверки схемы. Используется в тестах и как значение по умолчанию.
     /// </summary>
     public static FrontolSchema Unknown { get; } =
-        new(new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase), "unknown");
+        new(new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase),
+            "unknown", false, null, DateTime.MinValue);
 
     /// <summary>
     /// Отпечаток набора таблиц и колонок. Входит в ключ кеша модели EF:
@@ -32,7 +42,18 @@ public sealed class FrontolSchema
     /// </summary>
     public string Fingerprint { get; }
 
-    public bool IsKnown => !ReferenceEquals(this, Unknown);
+    /// <summary>Схема прочитана из базы. Если false — работаем по модели «как раньше».</summary>
+    public bool IsKnown { get; }
+
+    /// <summary>Почему схему не удалось прочитать (для лога).</summary>
+    public string? ReadError { get; }
+
+    /// <summary>Когда схема была прочитана (или когда попытка чтения провалилась).</summary>
+    public DateTime ResolvedAt { get; }
+
+    public int TableCount => _columns.Count;
+
+    public int ColumnCount { get; }
 
     public bool HasTable(string table)
         => !IsKnown || _columns.ContainsKey(table);
@@ -51,8 +72,9 @@ public sealed class FrontolSchema
             """
             select trim(rf.RDB$RELATION_NAME) as tab, trim(rf.RDB$FIELD_NAME) as col
             from RDB$RELATION_FIELDS rf
+            join RDB$RELATIONS r on r.RDB$RELATION_NAME = rf.RDB$RELATION_NAME
             where coalesce(rf.RDB$SYSTEM_FLAG, 0) = 0
-              and rf.RDB$VIEW_BLR is null
+              and r.RDB$VIEW_BLR is null
             """;
 
         using var reader = command.ExecuteReader();
@@ -62,10 +84,16 @@ public sealed class FrontolSchema
         while (reader.Read())
             Add(columns, reader.GetString(0), reader.GetString(1));
 
-        // Пустой каталог означает, что запрос отработал не так, как ожидалось: не рискуем
-        // выкинуть из модели всё подряд, а работаем как раньше.
-        return columns.Count == 0 ? Unknown : FromColumns(columns);
+        if (columns.Count == 0)
+            throw new InvalidOperationException("системный каталог Firebird вернул пустой список таблиц");
+
+        return FromColumns(columns);
     }
+
+    /// <summary>Попытка чтения схемы провалилась.</summary>
+    internal static FrontolSchema Failed(string error)
+        => new(new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase),
+            "unknown", false, error, DateTime.UtcNow);
 
     /// <summary>Схема, собранная вручную: используется в тестах.</summary>
     internal static FrontolSchema ForTests(params (string Table, string Column)[] columns)
@@ -79,7 +107,7 @@ public sealed class FrontolSchema
     }
 
     private static FrontolSchema FromColumns(Dictionary<string, HashSet<string>> columns)
-        => new(columns, BuildFingerprint(columns));
+        => new(columns, BuildFingerprint(columns), true, null, DateTime.UtcNow);
 
     private static void Add(Dictionary<string, HashSet<string>> columns, string table, string column)
     {
