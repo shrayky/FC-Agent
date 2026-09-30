@@ -7,9 +7,18 @@ public record FrontolAgentScripts
     public List<AtolCashRegisterDriver10Srcipt> CashRegisterDriver10Scripts { get; set; } = [];
 
     public bool UploadCashRegisterScripts { get; set; }
+
+    public List<ScriptLibrary> ScriptLibraries { get; set; } = [];
 }
 
 public record AtolCashRegisterDriver10Srcipt
+{
+    public string FileName { get; init; } = string.Empty;
+
+    public string Script { get; init; } = string.Empty;
+}
+
+public record ScriptLibrary
 {
     public string FileName { get; init; } = string.Empty;
 

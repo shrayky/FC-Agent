@@ -57,44 +57,57 @@ namespace Configuration.Services
                 return false;
             }
 
-            parameters = await _migrationService.Value.MigrateConfiguration(parameters);
+            var stored = await LoadConfiguration();
 
-            await NeedRestart(parameters);
+            parameters = await _migrationService.Value.MigrateConfiguration(parameters);
 
             await _fileManager.Value.SaveConfiguration(parameters);
             await _fileManager.Value.CreateBackup(parameters);
-            
+
+            // Порт, логин и пароль Firebird, уровень файлового лога собираются при старте процесса.
+            // Флаг ставим после записи, чтобы выход из процесса был уже с целым config.json.
+            RestartWhenStartupBindingChanged(stored.IsSuccess ? stored.Value : null, parameters);
+
             _cacheManager.Value.CacheConfiguration(parameters);
 
             _logger.LogInformation("Конфигурация обновлена");
             return true;
         }
 
-        private async Task<bool> NeedRestart(Parameters newParameters)
+        private void RestartWhenStartupBindingChanged(Parameters? previous, Parameters updated)
         {
-            var loadSettingsFromFile = await LoadConfiguration();
+            // Файл конфигурации не прочитался: сравнивать логин и лог не с чем.
+            // Порт 0 и пустые пути — тот же сигнал, что и раньше, когда снимок не удался.
+            if (previous is null)
+            {
+                var connection = updated.DatabaseConnection;
+                if (connection.DatabasePath != string.Empty
+                    || connection.LogDatabasePath != string.Empty
+                    || updated.ServerSettings.ApiIpPort != 0)
+                    _applicationState.Value.UpdateNeedRestart(true);
 
-            if (loadSettingsFromFile.IsFailure)
-                return false;
+                return;
+            }
 
-            var currentSettings = loadSettingsFromFile.Value;
-            var need = false;
-
-            need = (false
-                || currentSettings.DatabaseConnection.DatabasePath != newParameters.DatabaseConnection.DatabasePath
-                || currentSettings.DatabaseConnection.LogDatabasePath != newParameters.DatabaseConnection.LogDatabasePath
-                || currentSettings.DatabaseConnection.UserName != newParameters.DatabaseConnection.UserName
-                || currentSettings.DatabaseConnection.Password != newParameters.DatabaseConnection.Password
-                || currentSettings.ServerSettings.ApiIpPort != newParameters.ServerSettings.ApiIpPort
-                || currentSettings.LoggerSettings.IsEnabled != newParameters.LoggerSettings.IsEnabled
-                || currentSettings.LoggerSettings.LogLevel != newParameters.LoggerSettings.LogLevel
-                || currentSettings.LoggerSettings.LogDepth != newParameters.LoggerSettings.LogDepth
-            );
-
-            if (need)
+            if (StartupBindingChanged(previous, updated))
                 _applicationState.Value.UpdateNeedRestart(true);
-            
-            return need;
+        }
+
+        internal static bool StartupBindingChanged(Parameters previous, Parameters updated)
+        {
+            var previousConnection = previous.DatabaseConnection;
+            var connection = updated.DatabaseConnection;
+            var previousLogger = previous.LoggerSettings;
+            var logger = updated.LoggerSettings;
+
+            return previousConnection.DatabasePath != connection.DatabasePath
+                || previousConnection.LogDatabasePath != connection.LogDatabasePath
+                || previousConnection.UserName != connection.UserName
+                || previousConnection.Password != connection.Password
+                || previous.ServerSettings.ApiIpPort != updated.ServerSettings.ApiIpPort
+                || previousLogger.IsEnabled != logger.IsEnabled
+                || previousLogger.LogLevel != logger.LogLevel
+                || previousLogger.LogDepth != logger.LogDepth;
         }
 
         private async Task<Result<Parameters>> LoadConfiguration()
