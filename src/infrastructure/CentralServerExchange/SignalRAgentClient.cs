@@ -125,6 +125,7 @@ public class SignalRAgentClient
         connection.On<DeferredReceiptsRequest>("DeferredReceiptsRequest", OnDeferredReceiptsRequest);
         connection.On<LicenseActivationRequest>("LicenseActivationRequest", OnLicenseActivationRequest);
         connection.On<RestartRemoteRequest>("RestartRemote", OnRestartRemote);
+        connection.On<RestartAgentRequest>("RestartAgent", OnRestartAgent);
         connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
         connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
         connection.On<SalesDictionaryBatchMessage>("SalesDictionary", OnSalesDictionary);
@@ -433,6 +434,13 @@ public class SignalRAgentClient
 
         if (result.IsFailure)
             _logger.LogError(result.Error);
+    }
+
+    private Task OnRestartAgent(RestartAgentRequest message)
+    {
+        _logger.LogWarning("Получена команда перезапуска агента");
+        _applicationState.UpdateNeedRestart(true);
+        return Task.CompletedTask;
     }
 
     private Task OnRestartRemote(RestartRemoteRequest message)
