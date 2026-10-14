@@ -95,3 +95,56 @@
 
     <button class="btn btn-primary btn-save" type="submit">Сохранить</button>
 </form>
+
+<fieldset class="settings-card">
+    <legend>Лицензии АТОЛ</legend>
+    @if (Model.LicenseRead.FromFiles)
+    {
+        <div class="alert alert-info">
+            @(Model.LicenseRead.Licenses.Count == 0
+                ? "Менеджер лицензий не вернул список, файлы лицензий не найдены."
+                : "Менеджер лицензий не вернул список, показаны файлы.")
+        </div>
+        @if (Model.LicenseRead.Licenses.Count > 0)
+        {
+            <ul class="license-files">
+                @foreach (var license in Model.LicenseRead.Licenses)
+                {
+                    <li>@license.Id</li>
+                }
+            </ul>
+        }
+    }
+    else
+    {
+        <div class="license-scroll">
+            <table class="license-table">
+                <thead>
+                <tr>
+                    <th>Продукт</th>
+                    <th>Лицензия</th>
+                    <th>Действует до</th>
+                    <th>Осталось</th>
+                    <th>Статус</th>
+                    <th>Подключений</th>
+                    <th>Тариф</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var license in Model.LicenseRead.Licenses)
+                {
+                    <tr class="@SettingsModel.LicenseRowClass(license)">
+                        <td>@license.ProductName</td>
+                        <td>@license.Id</td>
+                        <td>@SettingsModel.ExpiresText(license)</td>
+                        <td>@SettingsModel.DaysText(license)</td>
+                        <td>@license.StatusText</td>
+                        <td>@license.ConnectionCount</td>
+                        <td>@SettingsModel.TariffText(license)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</fieldset>

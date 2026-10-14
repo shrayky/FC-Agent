@@ -13,9 +13,9 @@ public class FrontolStateService
     private readonly ILogger<FrontolStateService> _logger;
     private readonly IParametersService _parametersService;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly AtolLicenseService _atolLicenseService;
+    private readonly IAtolLicenseSource _atolLicenseService;
 
-    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IServiceScopeFactory scopeFactory, AtolLicenseService atolLicenseService)
+    public FrontolStateService(ILogger<FrontolStateService> logger, IParametersService parametersService, IServiceScopeFactory scopeFactory, IAtolLicenseSource atolLicenseService)
     {
         _logger = logger;
         _parametersService = parametersService;
@@ -23,7 +23,7 @@ public class FrontolStateService
         _atolLicenseService = atolLicenseService;
     }
 
-    public async Task<AgentStateResponse> Current()
+    public async Task<AgentStateResponse> Current(CancellationToken cancellationToken = default)
     {
         var settings = await _parametersService.Current();
 
@@ -58,7 +58,7 @@ public class FrontolStateService
                 DriverAto10lLogsSizeReader.TotalBytes(message => _logger.LogWarning(message))),
             
             FrontolVersion = frontolVersion,
-            Licenses = _atolLicenseService.FromFiles(),
+            Licenses = (await _atolLicenseService.Read(cancellationToken)).Licenses.ToList(),
             DeferredReceiptsCount = deferredReceiptsCount,
         };
         

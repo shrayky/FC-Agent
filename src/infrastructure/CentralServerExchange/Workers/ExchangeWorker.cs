@@ -34,7 +34,7 @@ public class ExchangeWorker : BackgroundService
 
             if (_signalRClient.ConnectionUp())
             {
-                var agentData = await _frontolStateService.Current();
+                var agentData = await _frontolStateService.Current(stoppingToken);
                 await _signalRClient.SendAgentState(agentData);
 
                 var logs = await _frontolLogsService.Collect();

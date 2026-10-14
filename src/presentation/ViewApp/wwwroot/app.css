@@ -68,7 +68,7 @@ a { color: #60a5fa; }
 a:hover { color: #93c5fd; }
 
 .container, .page {
-    max-width: 840px;
+    max-width: 1040px;
     margin: 24px auto;
     padding: 0 16px;
 }
@@ -230,6 +230,48 @@ label {
     background-color: #7f1d1d;
     border: 1px solid #ef4444;
     color: #fca5a5;
+}
+
+form + fieldset {
+    margin-top: 24px;
+}
+
+.license-scroll {
+    overflow-x: auto;
+}
+
+.license-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.license-table th,
+.license-table td {
+    border-bottom: 1px solid #262a40;
+    padding: 8px 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.license-table th {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.license-expired td {
+    background: #7f1d1d;
+    color: #fee2e2;
+}
+
+.license-soon td {
+    background: #7c2d12;
+    color: #ffedd5;
+}
+
+.license-files {
+    margin: 0;
+    padding-left: 18px;
 }
 
 /* Анимация появления */

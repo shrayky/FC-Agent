@@ -5,7 +5,7 @@ using Domain.Frontol.Models;
 using Domain.Messages.Dto;
 using Microsoft.Extensions.Logging;
 
-namespace CentralServerExchange.Services;
+namespace AtolLicenseSrvClient;
 
 public class AtolLicenseActivator : IAtolLicenseActivator
 {

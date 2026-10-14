@@ -1,8 +1,8 @@
 ﻿using System.Net;
+using AtolLicenseSrvClient;
 using CentralServerExchange.Services;
 using CentralServerExchange.Workers;
 using Domain.Agent.Interfaces;
-using Domain.Frontol.Interfaces;
 using Domain.Sales;
 using Domain.Sales.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,8 +42,7 @@ namespace CentralServerExchange
                 sp.GetRequiredService<IHttpClientFactory>().CreateClient(UpdateDownloaderClientName)));
 
             services.AddSingleton<FrontolStateService>();
-            services.AddSingleton<AtolLicenseService>();
-            services.AddSingleton<IAtolLicenseActivator, AtolLicenseActivator>();
+            services.AddAtolLicenseSrvClient();
             services.AddSingleton<FrontolLogsService>();
             services.AddSingleton<AgentLogsService>();
             services.AddSingleton<FrontolSettingsService>();
