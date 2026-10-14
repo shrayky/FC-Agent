@@ -53,6 +53,7 @@ namespace FrontolDatabase
             services.AddScoped<IFrontolDeferredReceipts, DeferredReceiptsRepository>();
             services.AddScoped<IFrontolSalesDocuments, SalesDocumentsRepository>();
             services.AddScoped<IFrontolWares, WaresRepository>();
+            services.AddScoped<IFrontolCashiers, CashiersRepository>();
             
             return services;
         }

@@ -10,5 +10,6 @@ public record FrontolSettingsResponse : Message
         MessageType = MessageType.FrontolSettings;
     }
 
+    public string EditId { get; set; } = string.Empty;
     public FrontolSettings Settings { get; set; } = new();
 }

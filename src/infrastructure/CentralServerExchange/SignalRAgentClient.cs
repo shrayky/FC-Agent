@@ -129,6 +129,7 @@ public class SignalRAgentClient
         connection.On<SalesSyncSettingsRequest>("SalesSyncSettings", OnSalesSyncSettings);
         connection.On<SalesCursorResponse>("SalesCursor", OnSalesCursor);
         connection.On<SalesDictionaryBatchMessage>("SalesDictionary", OnSalesDictionary);
+        connection.On<CashiersBatchMessage>("Cashiers", OnCashiers);
         connection.On<AgentLogsRequest>("AgentLogsRequest", OnAgentLogsRequest);
 
         connection.Reconnecting += error =>
@@ -313,8 +314,10 @@ public class SignalRAgentClient
     private async Task SendAgentLogs(AgentLogsResponse logs) =>
         await TrySend(logs, "AgentLogs");
 
-    public async Task<Result> SendFrontolSettingsApplyingIsSuccess() =>
-        await TrySend(new FrontolSettingsApplyingState { Success = true }, "FrontolSettingsApplying");
+    private async Task<Result> SendFrontolSettingsApplying(string editId) =>
+        await TrySend(
+            new FrontolSettingsApplyingState { Success = true, EditId = editId ?? string.Empty },
+            "FrontolSettingsApplying");
 
     public async Task RequestSalesCursor() =>
         await TrySend(new SalesCursorRequest(), "SalesCursorRequest");
@@ -342,6 +345,16 @@ public class SignalRAgentClient
                 Message = result.IsFailure ? result.Error : string.Empty
             },
             "SalesDictionaryApplying");
+
+    private async Task SendCashiersApplying(Result result, string editId) =>
+        await TrySend(
+            new CashiersApplyingState
+            {
+                Success = result.IsSuccess,
+                Message = result.IsFailure ? result.Error : string.Empty,
+                EditId = editId ?? string.Empty
+            },
+            "CashiersApplying");
 
     private async Task SendDeferredReceipts(DeferredReceiptOperation operation, Result<ReceiptList> result) =>
         await TrySend(
@@ -421,7 +434,7 @@ public class SignalRAgentClient
         var applyingResult = await _frontolSettingsService.ApplySettings(message.Settings);
 
         if (applyingResult.IsSuccess)
-            await SendFrontolSettingsApplyingIsSuccess();
+            await SendFrontolSettingsApplying(message.EditId);
     }
 
     private async Task OnPaySystemMode(PaySystemModeRequest message)
@@ -504,6 +517,22 @@ public class SignalRAgentClient
             _logger.LogError(result.Error);
 
         await SendSalesDictionaryApplying(result);
+    }
+
+    private async Task OnCashiers(CashiersBatchMessage message)
+    {
+        _logger.LogInformation(
+            "Получены кассиры: {count}, смещение {offset}",
+            message.Cashiers.Count,
+            message.Offset);
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var apply = scope.ServiceProvider.GetRequiredService<ICashierApplyService>();
+        var result = await apply.Apply(message.Offset, message.Cashiers);
+        if (result.IsFailure)
+            _logger.LogError(result.Error);
+
+        await SendCashiersApplying(result, message.EditId);
     }
 
     private async Task OnAgentLogsRequest(AgentLogsRequest message)

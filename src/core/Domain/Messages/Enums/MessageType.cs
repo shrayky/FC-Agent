@@ -17,5 +17,7 @@ public enum MessageType
     SalesDictionaryApplying,
     LicenseActivation,
     AgentLogs,
-    RestartAgent
+    RestartAgent,
+    Cashiers,
+    CashiersApplying
 }
