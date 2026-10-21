@@ -276,7 +276,7 @@ public class WaresRepository : IFrontolWares
         if (codes.Count == 0)
             return [];
 
-        var rows = await QueryByCodes(codes, isWare: 0).ToListAsync();
+        var rows = await FirebirdQuery.Load(codes, FirebirdQuery.KeyBatch, batch => QueryByCodes(batch, isWare: 0));
         return rows.ToDictionary(row => row.Code);
     }
 
@@ -286,7 +286,7 @@ public class WaresRepository : IFrontolWares
         if (codes.Count == 0)
             return [];
 
-        var rows = await QueryByCodes(codes, isWare: 1).ToListAsync();
+        var rows = await FirebirdQuery.Load(codes, FirebirdQuery.KeyBatch, batch => QueryByCodes(batch, isWare: 1));
         return rows.ToDictionary(row => row.Code);
     }
 
@@ -296,7 +296,7 @@ public class WaresRepository : IFrontolWares
         var property = Expression.Property(parameter, nameof(SprT.Code));
         return _ctx.Wares!
             .Where(ware => ware.IsWare == isWare)
-            .Where(OrEquals<SprT, int>(parameter, property, codes));
+            .Where(FirebirdQuery.OrEquals<SprT, int>(parameter, property, codes));
     }
 
     private async Task<Dictionary<int, int>> LoadTaxGroups(
@@ -310,11 +310,12 @@ public class WaresRepository : IFrontolWares
         if (codes.Count == 0)
             return [];
 
-        var parameter = Expression.Parameter(typeof(TaxGroup), "t");
-        var property = Expression.Property(parameter, nameof(TaxGroup.Code));
-        var rows = await _ctx.TaxGroups
-            .Where(OrEquals<TaxGroup, int>(parameter, property, codes))
-            .ToListAsync();
+        var rows = await FirebirdQuery.Load(codes, FirebirdQuery.KeyBatch, batch =>
+        {
+            var parameter = Expression.Parameter(typeof(TaxGroup), "t");
+            var property = Expression.Property(parameter, nameof(TaxGroup.Code));
+            return _ctx.TaxGroups!.Where(FirebirdQuery.OrEquals<TaxGroup, int>(parameter, property, batch));
+        });
         return rows.ToDictionary(row => row.Code, row => row.Id);
     }
 
@@ -329,11 +330,12 @@ public class WaresRepository : IFrontolWares
         if (codes.Count == 0)
             return [];
 
-        var parameter = Expression.Parameter(typeof(PrintGroup), "g");
-        var property = Expression.Property(parameter, nameof(PrintGroup.Code));
-        var rows = await _ctx.PrintGroups
-            .Where(OrEquals<PrintGroup, int>(parameter, property, codes))
-            .ToListAsync();
+        var rows = await FirebirdQuery.Load(codes, FirebirdQuery.KeyBatch, batch =>
+        {
+            var parameter = Expression.Parameter(typeof(PrintGroup), "g");
+            var property = Expression.Property(parameter, nameof(PrintGroup.Code));
+            return _ctx.PrintGroups!.Where(FirebirdQuery.OrEquals<PrintGroup, int>(parameter, property, batch));
+        });
         return rows.ToDictionary(row => row.Code, row => row.Id);
     }
 
@@ -417,14 +419,4 @@ public class WaresRepository : IFrontolWares
         return extra.ValueKind == JsonValueKind.Object && extra.TryGetProperty(name, out value);
     }
 
-    private static Expression<Func<T, bool>> OrEquals<T, TKey>(
-        ParameterExpression parameter,
-        MemberExpression property,
-        IReadOnlyList<TKey> values)
-    {
-        Expression body = Expression.Equal(property, Expression.Constant(values[0]));
-        for (var i = 1; i < values.Count; i++)
-            body = Expression.OrElse(body, Expression.Equal(property, Expression.Constant(values[i])));
-        return Expression.Lambda<Func<T, bool>>(body, parameter);
-    }
 }

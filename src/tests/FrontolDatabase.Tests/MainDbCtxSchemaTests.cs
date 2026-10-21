@@ -30,8 +30,9 @@ public class MainDbCtxSchemaTests
 
     private static MainDbCtx Context(FrontolSchemaProvider schemaProvider)
     {
-        var options = new DbContextOptionsBuilder<MainDbCtx>()
-            .UseFirebird(ConnectionString)
+        var builder = new DbContextOptionsBuilder<MainDbCtx>();
+        MainDbCtx.UseFrontolFirebird(builder, ConnectionString);
+        var options = builder
             .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>()
             .Options;
 
@@ -197,9 +198,11 @@ public class MainDbCtxSchemaTests
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddProvider(captured));
         configure(services);
-        services.AddDbContext<MainDbCtx>(options => options
-            .UseFirebird(ConnectionString)
-            .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>());
+        services.AddDbContext<MainDbCtx>(options =>
+        {
+            MainDbCtx.UseFrontolFirebird(options, ConnectionString);
+            options.ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>();
+        });
 
         var provider = services.BuildServiceProvider();
         var scope = provider.CreateScope();

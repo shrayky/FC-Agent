@@ -1,6 +1,7 @@
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Interfaces;
 using FrontolDatabase.Entitys;
+using FrontolDatabase.Mapping;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -81,22 +82,21 @@ public class MainDbRepository : IFrontolMainDb
         {
             var newVal = await NextChangeId();
 
-            var setting = await _ctx.Settings
-                .SingleOrDefaultAsync(s => s.Name == restartOption);
+            var text = newVal.ToString();
+            var rows = await _ctx.Settings.Where(s => s.Name == restartOption).ToListAsync();
 
-            if (setting is null)
+            if (rows.Count == 0)
             {
-                setting = new Settings
+                _ctx.Settings.Add(new Settings
                 {
                     Id = newVal,
                     Name = restartOption,
-                    Value = newVal.ToString()
-                };
-                _ctx.Settings.Add(setting);
+                    Value = text
+                });
             }
             else
             {
-                setting.Value = newVal.ToString();
+                SettingsRows.SetValue(rows, text);
             }
 
             await _ctx.SaveChangesAsync();

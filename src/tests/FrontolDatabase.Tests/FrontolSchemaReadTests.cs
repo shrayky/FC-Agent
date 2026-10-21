@@ -45,8 +45,9 @@ public class FrontolSchemaReadTests
 
         var schema = FrontolSchema.Read(connectionString);
 
-        var options = new DbContextOptionsBuilder<MainDbCtx>()
-            .UseFirebird(connectionString)
+        var builder = new DbContextOptionsBuilder<MainDbCtx>();
+        MainDbCtx.UseFrontolFirebird(builder, connectionString);
+        var options = builder
             .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>()
             .Options;
 

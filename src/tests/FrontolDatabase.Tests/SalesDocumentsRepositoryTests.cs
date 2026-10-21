@@ -169,9 +169,9 @@ public class SalesDocumentsRepositoryTests
     [Test]
     public void WaresByCodes_sql_для_нескольких_кодов_без_FALSE()
     {
-        var options = new DbContextOptionsBuilder<MainDbCtx>()
-            .UseFirebird("database=localhost:dummy.fdb;user=sysdba;password=masterkey")
-            .Options;
+        var builder = new DbContextOptionsBuilder<MainDbCtx>();
+        MainDbCtx.UseFrontolFirebird(builder, "database=localhost:dummy.fdb;user=sysdba;password=masterkey");
+        var options = builder.Options;
 
         using var ctx = new MainDbCtx(options);
         ctx.Wares = ctx.Set<SprT>();
@@ -190,9 +190,9 @@ public class SalesDocumentsRepositoryTests
     [Test]
     public void WareNames_запрос_не_тянет_поля_справочника()
     {
-        var options = new DbContextOptionsBuilder<MainDbCtx>()
-            .UseFirebird("database=localhost:dummy.fdb;user=sysdba;password=masterkey")
-            .Options;
+        var builder = new DbContextOptionsBuilder<MainDbCtx>();
+        MainDbCtx.UseFrontolFirebird(builder, "database=localhost:dummy.fdb;user=sysdba;password=masterkey");
+        var options = builder.Options;
 
         using var ctx = new MainDbCtx(options);
         ctx.Wares = ctx.Set<SprT>();

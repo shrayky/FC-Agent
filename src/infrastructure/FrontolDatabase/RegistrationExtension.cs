@@ -41,9 +41,11 @@ namespace FrontolDatabase
 
             services.AddSingleton<FrontolSchemaProvider>();
 
-            services.AddDbContext<MainDbCtx>(options => options
-                .UseFirebird(connectionString)
-                .ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>());
+            services.AddDbContext<MainDbCtx>(options =>
+            {
+                MainDbCtx.UseFrontolFirebird(options, connectionString);
+                options.ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>();
+            });
             
             services.AddScoped<IFrontolMainDb, MainDbRepository>();
             services.AddScoped<IFrontolSettings, SettingsRepository>();
@@ -74,7 +76,7 @@ namespace FrontolDatabase
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
             
             services.AddDbContext<LogDbCtx>(options =>
-                options.UseFirebird(connectionString));
+                MainDbCtx.UseFrontolFirebird(options, connectionString));
             
             services.AddScoped<IFrontolLog, LogRepository>();            
             return services;

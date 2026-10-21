@@ -23,7 +23,7 @@ public class LogDbCtx : DbContext
         System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
         if (!string.IsNullOrEmpty(_connectionString))
-            optionsBuilder.UseFirebird(_connectionString);
+            MainDbCtx.UseFrontolFirebird(optionsBuilder, _connectionString);
     }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)

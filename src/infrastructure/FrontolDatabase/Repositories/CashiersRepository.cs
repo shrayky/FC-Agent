@@ -116,24 +116,15 @@ public class CashiersRepository : IFrontolCashiers
         if (_ctx.UserProfiles == null || codes.Count == 0)
             return [];
 
-        var parameter = Expression.Parameter(typeof(Profile), "profile");
-        var property = Expression.Property(parameter, nameof(Profile.Code));
-        var rows = await _ctx.UserProfiles
-            .Where(OrEquals<Profile, int>(parameter, property, codes))
-            .ToListAsync();
+        var rows = await FirebirdQuery.Load(codes, FirebirdQuery.KeyBatch, batch =>
+        {
+            var parameter = Expression.Parameter(typeof(Profile), "profile");
+            var property = Expression.Property(parameter, nameof(Profile.Code));
+            return _ctx.UserProfiles!.Where(FirebirdQuery.OrEquals<Profile, int>(parameter, property, batch));
+        });
         return rows
             .GroupBy(profile => profile.Code)
             .ToDictionary(group => group.Key, group => group.First().Id);
     }
 
-    private static Expression<Func<T, bool>> OrEquals<T, TKey>(
-        ParameterExpression parameter,
-        MemberExpression property,
-        IReadOnlyList<TKey> values)
-    {
-        Expression body = Expression.Equal(property, Expression.Constant(values[0]));
-        for (var i = 1; i < values.Count; i++)
-            body = Expression.OrElse(body, Expression.Equal(property, Expression.Constant(values[i])));
-        return Expression.Lambda<Func<T, bool>>(body, parameter);
-    }
 }

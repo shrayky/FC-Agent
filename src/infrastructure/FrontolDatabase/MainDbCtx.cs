@@ -83,6 +83,13 @@ public class MainDbCtx : DbContext
             .FirstOrDefault()?.ConnectionString ?? string.Empty;
     }
 
+    // При явном типе провайдер кастует любую строку в VARCHAR(8191) UTF8,
+    // длина колонки на этот CAST не влияет. Два таких параметра не влезают в сообщение Firebird (64 КБ).
+    internal static void UseFrontolFirebird(DbContextOptionsBuilder optionsBuilder, string connectionString)
+        => optionsBuilder.UseFirebird(connectionString, fb => fb
+            .WithExplicitParameterTypes(false)
+            .WithExplicitStringLiteralTypes(false));
+
     public MainDbCtx(string connectionString)
     {
         _connectionString = connectionString;
@@ -94,7 +101,7 @@ public class MainDbCtx : DbContext
         System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
         if (!string.IsNullOrEmpty(_connectionString))
-            optionsBuilder.UseFirebird(_connectionString);
+            UseFrontolFirebird(optionsBuilder, _connectionString);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -116,6 +123,11 @@ public class MainDbCtx : DbContext
 
         modelBuilder.Entity<Settings>()
             .HasKey(k => new { k.Id });
+
+        // Длина NAME в модели. CAST в SQL от этого не меняется, его отключает UseFrontolFirebird.
+        modelBuilder.Entity<Settings>()
+            .Property(p => p.Name)
+            .HasMaxLength(100);
         
 
         modelBuilder.Entity<Profile>()

@@ -1,7 +1,6 @@
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Enums;
 using Domain.Frontol.Interfaces;
-using Domain.Frontol.Metadata;
 using Domain.Frontol.Models.Settings;
 using FrontolDatabase.Entitys;
 using FrontolDatabase.Mapping;
@@ -29,14 +28,7 @@ public class SettingsRepository: IFrontolSettings
         if (_ctx.Settings == null)
             return Result.Failure("Не удалось открыть Settings");
 
-        var names = SettingsMetadata<GlobalControl>.Properties
-            .Select(p => p.Name)
-            .Distinct()
-            .ToArray();
-
-        var settings = await _ctx.Settings
-            .Where(s => names.Contains(s.Name))
-            .ToListAsync();
+        var settings = await AllRows(tracking: true);
 
         string Formatter(object val) => val switch
         {
@@ -57,15 +49,7 @@ public class SettingsRepository: IFrontolSettings
         if (_ctx.Settings == null)
             return Result.Failure<GlobalControl>("Не удалось открыть Settings");
         
-        var names = SettingsMetadata<GlobalControl>.Properties
-            .Select(p => p.Name)
-            .Distinct()
-            .ToArray();
-
-        var settings = await _ctx.Settings
-            .AsNoTracking()
-            .Where(s => names.Contains(s.Name))
-            .ToListAsync();
+        var settings = await AllRows(tracking: false);
 
         object? Parser(string raw, Type type) =>
             type == typeof(YesNoWareEnum) ? YesNoWareParsers.ParseYesNoWareEnum(raw) :
@@ -83,29 +67,27 @@ public class SettingsRepository: IFrontolSettings
         if (_ctx.Settings == null)
             return Result.Failure("Не удалось открыть Settings");
 
-        var setting = await _ctx.Settings.FirstOrDefaultAsync(s => s.Name == name);
+        var rows = await _ctx.Settings.Where(s => s.Name == name).ToListAsync();
 
-        if (setting == null)
+        if (rows.Count == 0)
         {
             // Старая база Frontol может не содержать строки настройки: без неё значение
             // (например, код стартового скрипта) сохранить некуда — создаём её.
             var newId = await _mainDb.NextChangeId();
 
-            setting = new Settings
+            await _ctx.Settings.AddAsync(new Settings
             {
                 Id = newId,
                 Name = name,
                 Value = value
-            };
-
-            await _ctx.Settings.AddAsync(setting);
+            });
 
             _logger.LogWarning("Настройка {name} не найдена в таблице SETTINGS — создана со значением {value}", name, value);
 
             return Result.Success();
         }
 
-        setting.Value = value;
+        SettingsRows.SetValue(rows, value);
 
         return Result.Success();
     }
@@ -139,24 +121,20 @@ public class SettingsRepository: IFrontolSettings
             if (incoming.Count == 0)
                 return Result.Success();
 
-            var names = incoming.Select(p => p.Id).ToArray();
-            var rows = await _ctx.Settings
-                .Where(s => names.Contains(s.Name))
-                .ToListAsync();
+            var rows = await AllRows(tracking: true);
 
-            var rowsByName = rows
-                .GroupBy(s => s.Name)
-                .ToDictionary(g => g.Key, g => g.First());
+            var rowsByName = SettingsRows.Named(rows)
+                .ToDictionary(group => group.Key, group => group.ToList());
 
             foreach (var parameter in incoming)
             {
-                if (!rowsByName.TryGetValue(parameter.Id, out var row))
+                if (!rowsByName.TryGetValue(parameter.Id, out var namedRows))
                 {
                     _logger.LogWarning("Настройка {name} не найдена в таблице SETTINGS, пропущена", parameter.Id);
                     continue;
                 }
 
-                row.Value = FrontolTimeParsers.ToDb(parameter.Value);
+                SettingsRows.SetValue(namedRows, FrontolTimeParsers.ToDb(parameter.Value));
             }
 
             await _ctx.SaveChangesAsync();
@@ -177,17 +155,14 @@ public class SettingsRepository: IFrontolSettings
             if (_ctx.Settings == null)
                 return Result.Failure<List<FrontolParameter>>("Не удалось открыть Settings");
 
-            var rows = await _ctx.Settings
-                .AsNoTracking()
-                .Where(s => s.Name != "")
-                .Select(s => new { s.Name, s.Value })
-                .ToListAsync();
-
-            var parameters = rows.Select(s => new FrontolParameter
-            {
-                Id = s.Name,
-                Value = FrontolTimeParsers.FromDb(s.Value)
-            }).ToList();
+            var parameters = (await AllRows(tracking: false))
+                .Where(row => !string.IsNullOrEmpty(row.Name))
+                .Select(row => new FrontolParameter
+                {
+                    Id = row.Name,
+                    Value = FrontolTimeParsers.FromDb(row.Value)
+                })
+                .ToList();
 
             return Result.Success(parameters);
         }
@@ -198,4 +173,13 @@ public class SettingsRepository: IFrontolSettings
             return Result.Failure<List<FrontolParameter>>(err);
         }
     }
+
+    internal IQueryable<Entitys.Settings> AllRowsQuery(bool tracking)
+    {
+        var query = _ctx.Settings!.AsQueryable();
+        return tracking ? query : query.AsNoTracking();
+    }
+
+    private Task<List<Entitys.Settings>> AllRows(bool tracking)
+        => AllRowsQuery(tracking).ToListAsync();
 }

@@ -6,7 +6,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <AssemblyName>fc</AssemblyName>
         <RootNamespace>HostApp</RootNamespace>
-		<Version>1.2.0</Version>
+		<Version>1.3.0</Version>
+		<Company>Automation</Company>
+		<Product>DS:FC Agent</Product>
+		<AssemblyTitle>fc</AssemblyTitle>
+		<Description>Служба агента для централизованной настройки баз данных фронтола</Description>
+		<Copyright>© Automation. https://fcommander.ru</Copyright>
 
 		<PublishAot>true</PublishAot>
 		<InvariantGlobalization>true</InvariantGlobalization>
@@ -16,8 +21,7 @@
 		<DebugType>portable</DebugType>
 		<DebugSymbols>true</DebugSymbols>
 
-		<OptimizationPreference>Size</OptimizationPreference>
-		
+		<!-- Size у Native AOT чаще даёт ложный Trojan:Win32/Bearfoos.B!ml. -->
     </PropertyGroup>
 
     <ItemGroup>

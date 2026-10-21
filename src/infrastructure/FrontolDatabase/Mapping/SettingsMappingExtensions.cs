@@ -11,14 +11,14 @@ public static class SettingsMappingExtensions
         where TConfig : new()
     {
         var result = new TConfig();
-        var dict = settings.ToDictionary(s => s.Name, s => s.Value);
+        var dict = SettingsRows.ByLowestId(settings);
 
         foreach (var meta in SettingsMetadata<TConfig>.Properties)
         {
-            if (!dict.TryGetValue(meta.Name, out var raw))
+            if (!dict.TryGetValue(meta.Name, out var setting))
                 continue;
 
-            var parsed = valueParser(raw, meta.Property.PropertyType);
+            var parsed = valueParser(setting.Value, meta.Property.PropertyType);
 
             if (parsed is not null)
                 meta.Property.SetValue(result, parsed);
@@ -32,11 +32,13 @@ public static class SettingsMappingExtensions
         IList<Settings> settings,
         Func<object, string> valueFormatter)
     {
-        var dict = settings.ToDictionary(s => s.Name, s => s);
+        // Повтор NAME пишем во все строки: касса может прочитать любую копию.
+        var groups = SettingsRows.Named(settings)
+            .ToDictionary(group => group.Key, group => group.ToList());
 
         foreach (var meta in SettingsMetadata<TConfig>.Properties)
         {
-            if (!dict.TryGetValue(meta.Name, out var setting))
+            if (!groups.TryGetValue(meta.Name, out var namedRows))
                 continue;
 
             var val = meta.Property.GetValue(config);
@@ -53,7 +55,7 @@ public static class SettingsMappingExtensions
                 value = value == "0" ? "0" : "2";
             }
 
-            setting.Value = value;
+            SettingsRows.SetValue(namedRows, value);
         }
     }
 }

@@ -401,7 +401,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         if (wareCodes.Count == 0)
             return [];
 
-        return await WaresByCodesQuery(wareCodes).ToListAsync();
+        return await FirebirdQuery.Load(wareCodes, FirebirdQuery.KeyBatch, WaresByCodesQuery);
     }
 
     // Firebird 2.1: Contains даёт WHERE FALSE на пустом списке, булева типа нет.
@@ -409,13 +409,9 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
     {
         var parameter = Expression.Parameter(typeof(SprT), "w");
         var property = Expression.Property(parameter, nameof(SprT.Code));
-        Expression body = Expression.Equal(property, Expression.Constant(wareCodes[0]));
-        for (var i = 1; i < wareCodes.Count; i++)
-            body = Expression.OrElse(body, Expression.Equal(property, Expression.Constant(wareCodes[i])));
-
         return _ctx.Wares!
             .AsNoTracking()
-            .Where(Expression.Lambda<Func<SprT, bool>>(body, parameter));
+            .Where(FirebirdQuery.OrEquals<SprT, int>(parameter, property, wareCodes));
     }
 
     private async Task<List<PrintGroupInfo>> LoadPrintGroups()

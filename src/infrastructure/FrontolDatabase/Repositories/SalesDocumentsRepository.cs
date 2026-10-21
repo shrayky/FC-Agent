@@ -48,7 +48,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
                 return Result.Success<IReadOnlyList<SalesDocument>>([]);
 
             var ids = documents.Select(d => d.Id).ToList();
-            var transactions = await TransactionsByDocumentIdsQuery(ids).ToListAsync();
+            var transactions = await FirebirdQuery.Load(ids, FirebirdQuery.KeyBatch, TransactionsByDocumentIdsQuery);
             var byDocument = transactions
                 .GroupBy(t => t.DocumentId)
                 .ToDictionary(g => g.Key, g => g.ToList());
@@ -66,7 +66,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
 
             if (wareCodes.Count > 0)
             {
-                var wares = await WareNamesByCodesQuery(wareCodes).ToListAsync();
+                var wares = await FirebirdQuery.Load(wareCodes, FirebirdQuery.KeyBatch, WareNamesByCodesQuery);
 
                 waresByCode = wares
                     .GroupBy(ware => ware.Code)
@@ -81,7 +81,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
 
             var cashiers = cashierIds.Count == 0
                 ? []
-                : await CashiersByIdsQuery(cashierIds).ToListAsync();
+                : await FirebirdQuery.Load(cashierIds, FirebirdQuery.KeyBatch, CashiersByIdsQuery);
             var cashiersById = cashiers
                 .GroupBy(p => p.Id)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -94,7 +94,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
 
             var paymentKinds = paymentCodes.Count == 0
                 ? []
-                : await PaymentsByCodesQuery(paymentCodes).ToListAsync();
+                : await FirebirdQuery.Load(paymentCodes, FirebirdQuery.KeyBatch, PaymentsByCodesQuery);
             var paymentsByCode = paymentKinds
                 .GroupBy(p => p.Code)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -107,7 +107,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
 
             var docKinds = docKindIds.Count == 0
                 ? []
-                : await DocKindsByIdsQuery(docKindIds).ToListAsync();
+                : await FirebirdQuery.Load(docKindIds, FirebirdQuery.KeyBatch, DocKindsByIdsQuery);
             var docKindsById = docKinds
                 .GroupBy(k => k.Id)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -181,7 +181,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         var property = Expression.Property(parameter, nameof(SprT.Code));
         return _ctx.Wares!
             .AsNoTracking()
-            .Where(OrEquals<SprT, int>(parameter, property, wareCodes));
+            .Where(FirebirdQuery.OrEquals<SprT, int>(parameter, property, wareCodes));
     }
 
     // Только код и наименование. Поля справочника Frontol в базе nullable, и их чтение
@@ -205,7 +205,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         var property = Expression.Property(parameter, nameof(TranzT.DocumentId));
         return _ctx.Transactions!
             .AsNoTracking()
-            .Where(OrEquals<TranzT, long>(parameter, property, documentIds));
+            .Where(FirebirdQuery.OrEquals<TranzT, long>(parameter, property, documentIds));
     }
 
     internal IQueryable<User> CashiersByIdsQuery(IReadOnlyList<int> userIds)
@@ -214,7 +214,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         var property = Expression.Property(parameter, nameof(User.Id));
         return _ctx.Users!
             .AsNoTracking()
-            .Where(OrEquals<User, int>(parameter, property, userIds));
+            .Where(FirebirdQuery.OrEquals<User, int>(parameter, property, userIds));
     }
 
     internal IQueryable<Payment> PaymentsByCodesQuery(IReadOnlyList<int> paymentCodes)
@@ -223,7 +223,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         var property = Expression.Property(parameter, nameof(Payment.Code));
         return _ctx.Payments!
             .AsNoTracking()
-            .Where(OrEquals<Payment, int>(parameter, property, paymentCodes));
+            .Where(FirebirdQuery.OrEquals<Payment, int>(parameter, property, paymentCodes));
     }
 
     internal IQueryable<DocKind> DocKindsByIdsQuery(IReadOnlyList<int> docKindIds)
@@ -232,19 +232,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         var property = Expression.Property(parameter, nameof(DocKind.Id));
         return _ctx.DocKinds!
             .AsNoTracking()
-            .Where(OrEquals<DocKind, int>(parameter, property, docKindIds));
-    }
-
-    private static Expression<Func<T, bool>> OrEquals<T, TKey>(
-        ParameterExpression parameter,
-        MemberExpression property,
-        IReadOnlyList<TKey> values)
-    {
-        Expression body = Expression.Equal(property, Expression.Constant(values[0]));
-        for (var i = 1; i < values.Count; i++)
-            body = Expression.OrElse(body, Expression.Equal(property, Expression.Constant(values[i])));
-
-        return Expression.Lambda<Func<T, bool>>(body, parameter);
+            .Where(FirebirdQuery.OrEquals<DocKind, int>(parameter, property, docKindIds));
     }
 
     private static SalesDocument Map(
