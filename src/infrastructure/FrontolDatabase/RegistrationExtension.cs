@@ -56,6 +56,7 @@ namespace FrontolDatabase
             services.AddScoped<IFrontolSalesDocuments, SalesDocumentsRepository>();
             services.AddScoped<IFrontolWares, WaresRepository>();
             services.AddScoped<IFrontolCashiers, CashiersRepository>();
+            services.AddScoped<IFrontolDocumentConfiguration, DocumentConfigurationRepository>();
             
             return services;
         }

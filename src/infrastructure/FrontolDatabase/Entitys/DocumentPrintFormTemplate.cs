@@ -15,35 +15,35 @@ public class DocumentPrintFormTemplate
     public int Code { get; set; }
 
     [Column("NAME")]
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
     [Column("ISFOLDER")]
-    public bool IsFolder { get; set; }
+    public int? IsFolder { get; set; }
 
     [Column("PARENTID")]
-    public int ParentID { get; set; }
+    public int? ParentID { get; set; }
 
     [Column("MINLINES")]
-    public int MinLines { get; set; }
+    public int? MinLines { get; set; }
 
     [Column("MAXLINES")]
-    public int MaxLines { get; set; }
+    public int? MaxLines { get; set; }
 
     [Column("TEMPLATETYPE")]
-    public string TemplateType { get; set; } = string.Empty;
+    public string? TemplateType { get; set; }
 
     [Column("PRINTTARGET")]
-    public PrintTargetEnum PrintTarget { get; set; }
+    public PrintTargetEnum? PrintTarget { get; set; }
 
     [Column("SCRIPTDATA")]
-    public string ScriptData { get; set; } = string.Empty;
+    public string? ScriptData { get; set; }
 
     [Column("DOCORIENTATION")]
-    public int RotateOn180 { get; set; }
+    public int? RotateOn180 { get; set; }
 
     [Column("FRDATA")]
-    public byte[] FastReportDocument { get; set; } = [];
+    public byte[]? FastReportDocument { get; set; }
 
     [Column("MASTERSETTINGS")]
-    public string MasterSettings { get; set; } = string.Empty;
+    public string? MasterSettings { get; set; }
 }

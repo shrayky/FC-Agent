@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FrontolDatabase.Entitys;
+using Microsoft.EntityFrameworkCore;
 using Shared.Json;
 
 namespace FrontolDatabase.Tests;
@@ -34,5 +35,25 @@ public class DocumentPrintFormTemplateTests
         var json = JsonSerializer.Serialize(entity, JsonSerializeOptionsProvider.Default());
 
         Assert.That(json, Does.Contain("\"FastReportDocument\": \"AAH/\""));
+    }
+
+    // Без явного типа "BLOB" строка без длины мапится как ACTSCRIPT.DATA.
+    [Test]
+    public void ScriptData_и_MasterSettings_мапятся_как_текст_скрипта_действий()
+    {
+        var builder = new DbContextOptionsBuilder<MainDbCtx>();
+        MainDbCtx.UseFrontolFirebird(builder, "database=localhost:dummy.fdb;user=sysdba;password=masterkey");
+
+        using var ctx = new MainDbCtx(builder.Options, new FrontolSchemaProvider(FrontolSchema.Unknown));
+        var template = ctx.Model.FindEntityType(typeof(DocumentPrintFormTemplate));
+        var actionScript = ctx.Model.FindEntityType(typeof(ActScript));
+        var scriptType = actionScript!.FindProperty(nameof(ActScript.Script))!.GetColumnType();
+
+        Assert.That(template!.FindProperty(nameof(DocumentPrintFormTemplate.ScriptData))!.GetColumnType(),
+            Is.EqualTo(scriptType));
+        Assert.That(template.FindProperty(nameof(DocumentPrintFormTemplate.MasterSettings))!.GetColumnType(),
+            Is.EqualTo(scriptType));
+        Assert.That(template.FindProperty(nameof(DocumentPrintFormTemplate.FastReportDocument))!.GetColumnType(),
+            Is.EqualTo("BLOB"));
     }
 }

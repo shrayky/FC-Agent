@@ -1,4 +1,4 @@
-﻿namespace FrontolDatabase.Entitys;
+﻿namespace Domain.Frontol.Enums;
 
 public enum DocOpeartionActEnum
 {

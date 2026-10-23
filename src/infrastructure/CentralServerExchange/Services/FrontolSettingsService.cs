@@ -27,6 +27,7 @@ public class FrontolSettingsService
         var actionScriptRepository = scope.ServiceProvider.GetRequiredService<IFrontolActionScripts>();
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
         var scriptLibraries = scope.ServiceProvider.GetRequiredService<IFrontolScriptLibraries>();
+        var documents = scope.ServiceProvider.GetRequiredService<IFrontolDocumentConfiguration>();
 
         var globalConfig = await repository.GetGlobalControlConfig();
         var parameters = await repository.GetParameters();
@@ -34,6 +35,7 @@ public class FrontolSettingsService
         var frontolScript = await actionScriptRepository.FromDb();
         var driverScripts = await cashRegisterScripts.FromFiles();
         var libraries = await scriptLibraries.FromFiles();
+        var documentConfiguration = await documents.Read();
 
         if (globalConfig.IsFailure)
             return Result.Failure<FrontolSettings>(globalConfig.Error);
@@ -53,6 +55,9 @@ public class FrontolSettingsService
         if (libraries.IsFailure)
             return Result.Failure<FrontolSettings>(libraries.Error);
 
+        if (documentConfiguration.IsFailure)
+            return Result.Failure<FrontolSettings>(documentConfiguration.Error);
+
         FrontolAgentScripts scripts = new()
         {
             FrontolScript = frontolScript.Value,
@@ -65,7 +70,11 @@ public class FrontolSettingsService
             GlobalControl = globalConfig.Value,
             UserProfiles = userProfiles.Value,
             Settings = parameters.Value,
-            Scripts = scripts
+            Scripts = scripts,
+            DocumentKinds = documentConfiguration.Value.DocumentKinds,
+            DocumentTemplates = documentConfiguration.Value.DocumentTemplates,
+            PrintGroups = documentConfiguration.Value.PrintGroups,
+            Comments = documentConfiguration.Value.Comments
         };
         
         return Result.Success(packet);
@@ -80,21 +89,35 @@ public class FrontolSettingsService
         var actionScriptRepository = scope.ServiceProvider.GetRequiredService<IFrontolActionScripts>();
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
         var scriptLibraries = scope.ServiceProvider.GetRequiredService<IFrontolScriptLibraries>();
+        var documents = scope.ServiceProvider.GetRequiredService<IFrontolDocumentConfiguration>();
 
-        var updateSettings = await settingsRepository.LoadGlobalControlConfig(settings.GlobalControl)
-            .Tap(async () => await settingsRepository.LoadParameters(settings.Settings ?? []))
-            .Tap(async () => await userRepository.LoadUserProfiles(settings.UserProfiles))
-            .Tap(async () => await scriptLibraries.ToFiles(settings.Scripts.ScriptLibraries))
-            .Tap(async () => await actionScriptRepository.ToDb(WithLibraryPath(settings.Scripts.FrontolScript)))
-            .Tap(async () => await cashRegisterScripts.ToFiles(settings.Scripts.CashRegisterDriver10Scripts, settings.Scripts.UploadCashRegisterScripts))
-            .Tap(async () => await mainRepository.Restart());
+        // Bind, не Tap: Tap отбрасывает Result шага, и наверх уходит успех,
+        // хотя запись шаблона или скрипта уже упала.
+        // Секции базы — одна транзакция. Файлы после фиксации: каталоги скриптов
+        // откатить вместе с Firebird нельзя. Перезапуск — только когда записаны оба.
+        var written = await mainRepository.BeginWrite()
+            .Bind(() => settingsRepository.LoadGlobalControlConfig(settings.GlobalControl))
+            .Bind(() => settingsRepository.LoadParameters(settings.Settings ?? []))
+            .Bind(() => userRepository.LoadUserProfiles(settings.UserProfiles))
+            .Bind(() => actionScriptRepository.ToDb(WithLibraryPath(settings.Scripts.FrontolScript)))
+            .Bind(() => documents.Apply(new DocumentConfiguration
+            {
+                DocumentKinds = settings.DocumentKinds,
+                DocumentTemplates = settings.DocumentTemplates,
+                PrintGroups = settings.PrintGroups,
+                Comments = settings.Comments
+            }))
+            .Bind(() => mainRepository.CommitWrite());
 
-        if (updateSettings.IsSuccess)
+        if (written.IsFailure)
         {
-
+            await mainRepository.RollbackWrite();
+            return written;
         }
 
-        return updateSettings;
+        return await scriptLibraries.ToFiles(settings.Scripts.ScriptLibraries)
+            .Bind(() => cashRegisterScripts.ToFiles(settings.Scripts.CashRegisterDriver10Scripts, settings.Scripts.UploadCashRegisterScripts))
+            .Bind(() => mainRepository.Restart());
     }
 
     private ActionScript WithLibraryPath(ActionScript script)

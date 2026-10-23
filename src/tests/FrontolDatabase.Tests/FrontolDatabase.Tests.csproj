@@ -28,6 +28,7 @@
         <ProjectReference Include="..\..\core\Domain\Domain.csproj" />
         <ProjectReference Include="..\..\core\Application\Application.csproj" />
         <ProjectReference Include="..\..\infrastructure\FrontolDatabase\FrontolDatabase.csproj" />
+        <ProjectReference Include="..\..\infrastructure\CentralServerExchange\CentralServerExchange.csproj" />
     </ItemGroup>
 
 </Project>

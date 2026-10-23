@@ -12,32 +12,35 @@ public class DocKindTemplate
     public int Id { get; set; }
 
     [Column("CODE")]
-    public int Code { get; set; }
+    public int? Code { get; set; }
+
+    [Column("DOCKINDID")]
+    public int? DocKindId { get; set; }
 
     [Column("DOCTEMPLID")]
-    public int DocTemplID { get; set; }
+    public int? DocTemplID { get; set; }
 
     [Column("PREVIEW")]
-    public bool Preview { get; set; }
+    public int? Preview { get; set; }
 
     [Column("COPYCOUNT")]
-    public int CopyCount { get; set; } = 0;
+    public int? CopyCount { get; set; }
 
     [Column("OPERATION")]
-    public DocOperationEnum Operation { get; set; }
+    public DocOperationEnum? Operation { get; set; }
 
     [Column("ACT")]
-    public DocOpeartionActEnum Act { get; set; }
+    public DocOpeartionActEnum? Act { get; set; }
 
     [Column("USECOPYCOUNT")]
-    public bool UseCopyCount { get; set; }
+    public int? UseCopyCount { get; set; }
 
     [Column("PRINTEMPTY")]
-    public bool PrintEmpty { get; set; }
+    public int? PrintEmpty { get; set; }
 
     [Column("DIVIDEPRINTGROUPS")]
-    public bool DividePrintGroups { get; set; }
+    public int? DividePrintGroups { get; set; }
 
     [Column("CANCELONERRORS")]
-    public bool CancelOnErrors { get; set; }
+    public int? CancelOnErrors { get; set; }
 }

@@ -432,9 +432,14 @@ public class SignalRAgentClient
         _logger.LogInformation("Получен пакет с настройками фронтола от сервера: {message}", message);
 
         var applyingResult = await _frontolSettingsService.ApplySettings(message.Settings);
+        if (applyingResult.IsFailure)
+        {
+            // Подтверждение есть только у целиком записанного пакета. Ошибка на fc — таймаут.
+            _logger.LogError(applyingResult.Error);
+            return;
+        }
 
-        if (applyingResult.IsSuccess)
-            await SendFrontolSettingsApplying(message.EditId);
+        await SendFrontolSettingsApplying(message.EditId);
     }
 
     private async Task OnPaySystemMode(PaySystemModeRequest message)

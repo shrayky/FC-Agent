@@ -20,6 +20,9 @@ public class MainDbCtx : DbContext
     private DbSet<Devices>? _devices;
     private DbSet<Document>? _documents;
     private DbSet<DocKind>? _docKinds;
+    private DbSet<DocKindTemplate>? _docKindTemplates;
+    private DbSet<DocumentPrintFormTemplate>? _documentTemplates;
+    private DbSet<FrontolComment>? _comments;
     private DbSet<TranzT>? _transactions;
     private DbSet<Payment>? _payments;
     private DbSet<SprT>? _wares;
@@ -39,6 +42,9 @@ public class MainDbCtx : DbContext
     public DbSet<Devices>? Devices { get => Available(_devices); set => _devices = value; }
     public DbSet<Document>? Documents { get => Available(_documents); set => _documents = value; }
     public DbSet<DocKind>? DocKinds { get => Available(_docKinds); set => _docKinds = value; }
+    public DbSet<DocKindTemplate>? DocKindTemplates { get => Available(_docKindTemplates); set => _docKindTemplates = value; }
+    public DbSet<DocumentPrintFormTemplate>? DocumentTemplates { get => Available(_documentTemplates); set => _documentTemplates = value; }
+    public DbSet<FrontolComment>? Comments { get => Available(_comments); set => _comments = value; }
     public DbSet<TranzT>? Transactions { get => Available(_transactions); set => _transactions = value; }
     public DbSet<Payment>? Payments { get => Available(_payments); set => _payments = value; }
     public DbSet<SprT>? Wares { get => Available(_wares); set => _wares = value; }
@@ -173,6 +179,10 @@ public class MainDbCtx : DbContext
             .HasKey(k => k.Id);
 
         modelBuilder.Entity<DocKind>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<DocKind>()
             .Property(p => p.AskComment)
             .HasConversion(boolToIntConverter);
 
@@ -227,6 +237,12 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<PrintGroup>()
             .HasKey(k => k.Id);
 
+        modelBuilder.Entity<PrintGroup>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        ConfigureDocumentTemplates(modelBuilder);
+
         modelBuilder.Entity<Remain>()
             .HasKey(k => k.Id);
 
@@ -260,6 +276,37 @@ public class MainDbCtx : DbContext
 
         // Обязательно последним: убирает из модели всё, чего нет в подключённой базе.
         ExcludeMissingSchemaParts(modelBuilder);
+    }
+
+    private static void ConfigureDocumentTemplates(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DocKindTemplate>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<DocKindTemplate>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        modelBuilder.Entity<DocumentPrintFormTemplate>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<DocumentPrintFormTemplate>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        // SCRIPTDATA и MASTERSETTINGS — текстовый BLOB, как ACTSCRIPT.DATA.
+        // Явный тип "BLOB" без подтипа провайдер шлёт как двоичный, и Firebird
+        // пытается привести string к byte[].
+        modelBuilder.Entity<DocumentPrintFormTemplate>()
+            .Property(p => p.FastReportDocument)
+            .HasColumnType("BLOB");
+
+        modelBuilder.Entity<FrontolComment>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<FrontolComment>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
     }
 
     /// <summary>

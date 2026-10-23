@@ -110,6 +110,23 @@ public class MainDbCtxSchemaTests
     }
 
     [Test]
+    public void Старая_PRINTGROUP_без_новых_колонок_читает_код_и_имя()
+    {
+        using var ctx = Context(FrontolSchema.ForTests(
+            ("PRINTGROUP", "ID"),
+            ("PRINTGROUP", "CODE"),
+            ("PRINTGROUP", "NAME"),
+            ("PRINTGROUP", "DELETED")));
+        ctx.PrintGroups = ctx.Set<PrintGroup>();
+
+        var sql = ctx.PrintGroups!.ToQueryString();
+
+        Assert.That(sql, Does.Contain("NAME"));
+        Assert.That(sql, Does.Not.Contain("TAXGROUPID"));
+        Assert.That(sql, Does.Not.Contain("PROPOSEFORCHEQUE"));
+    }
+
+    [Test]
     public void Старый_DOCKIND_без_полей_синхронизации_остаётся_в_запросе()
     {
         using var ctx = Context(FrontolSchema.ForTests(
@@ -132,6 +149,36 @@ public class MainDbCtxSchemaTests
 
         Assert.That(text, Is.Not.Null);
         Assert.That(text!.IsNullable, Is.True);
+    }
+
+    [Test]
+    public void Запрос_справочников_документов_содержит_колонки_контракта()
+    {
+        using var ctx = Context(new FrontolSchemaProvider(FrontolSchema.Unknown));
+        ctx.DocumentTemplates = ctx.Set<DocumentPrintFormTemplate>();
+        ctx.DocKindTemplates = ctx.Set<DocKindTemplate>();
+        ctx.Comments = ctx.Set<FrontolComment>();
+
+        var templates = ctx.DocumentTemplates!.ToQueryString();
+        Assert.That(templates, Does.Contain("DOCTEMPLATE"));
+        Assert.That(templates, Does.Contain("PARENTID"));
+        Assert.That(templates, Does.Contain("ISFOLDER"));
+        Assert.That(templates, Does.Contain("FRDATA"));
+        Assert.That(templates, Does.Not.Contain("CHNG"));
+
+        var links = ctx.DocKindTemplates!.ToQueryString();
+        Assert.That(links, Does.Contain("DOCKINDTMPL"));
+        Assert.That(links, Does.Contain("DOCTEMPLID"));
+        Assert.That(links, Does.Contain("OPERATION"));
+        Assert.That(links, Does.Contain("ACT"));
+        Assert.That(links, Does.Not.Contain("CHNG"));
+
+        var comments = ctx.Comments!.ToQueryString();
+        Assert.That(comments, Does.Contain("\"COMMENT\""));
+        Assert.That(comments, Does.Contain("NAME"));
+        Assert.That(comments, Does.Contain("TEXT"));
+        Assert.That(comments, Does.Contain("DELETED"));
+        Assert.That(comments, Does.Not.Contain("CHNG"));
     }
 
     [Test]
