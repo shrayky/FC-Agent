@@ -50,6 +50,7 @@ public class CashiersRepositoryTests
         var user = _db.Users!.Single(row => row.Code == 105);
         Assert.That(user.Id, Is.EqualTo(9000));
         Assert.That(user.Name, Is.EqualTo("Анна"));
+        Assert.That(user.Text, Is.EqualTo("Анна"));
         Assert.That(user.ProfileId, Is.EqualTo(40));
         Assert.That(user.Pswrd, Is.EqualTo("5ebe2294ecd0e0f08eab7690d2a6ee69"));
         Assert.That(user.Card, Is.EqualTo("4601"));
@@ -64,6 +65,7 @@ public class CashiersRepositoryTests
             Id = 3,
             Code = 105,
             Name = "старый",
+            Text = "старый текст",
             ProfileId = 1,
             Pswrd = "old",
             Card = "old-card",
@@ -77,6 +79,7 @@ public class CashiersRepositoryTests
         var user = _db.Users!.Single();
         Assert.That(user.Id, Is.EqualTo(3));
         Assert.That(user.Name, Is.EqualTo("Анна"));
+        Assert.That(user.Text, Is.EqualTo("Анна"));
         Assert.That(user.ProfileId, Is.EqualTo(40));
         Assert.That(user.Pswrd, Is.EqualTo("5ebe2294ecd0e0f08eab7690d2a6ee69"));
         Assert.That(user.Card, Is.EqualTo("4601"));

@@ -28,6 +28,7 @@ public class CashiersRepository : IFrontolCashiers
     // Кассир списка — CODE больше смещения. Нет его в пакете — строка USER удаляется:
     // флага Deleted Frontol не хватает, кассир остаётся в справочнике.
     // Пользователи с кодом не выше смещения не трогаем. В PSWRD пишется MD5 пароля.
+    // TEXT пишется тем же именем: в пакете отдельного текста нет, пустой TEXT Frontol показывает пустым.
     public async Task<Result> Apply(int offset, IReadOnlyList<CashierItem> cashiers)
     {
         try
@@ -55,6 +56,7 @@ public class CashiersRepository : IFrontolCashiers
                         Id = id,
                         Code = row.Code,
                         Name = row.Item.Name,
+                        Text = row.Item.Name,
                         ProfileId = profileId,
                         Pswrd = PasswordHash(row.Item.Password),
                         Card = row.Item.Barcode,
@@ -64,6 +66,7 @@ public class CashiersRepository : IFrontolCashiers
                 }
 
                 existing.Name = row.Item.Name;
+                existing.Text = row.Item.Name;
                 existing.ProfileId = profileId;
                 existing.Pswrd = PasswordHash(row.Item.Password);
                 existing.Card = row.Item.Barcode;

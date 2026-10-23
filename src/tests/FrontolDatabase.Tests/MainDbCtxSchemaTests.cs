@@ -125,6 +125,16 @@ public class MainDbCtxSchemaTests
     }
 
     [Test]
+    public void USER_TEXT_допускает_NULL()
+    {
+        using var ctx = Context(new FrontolSchemaProvider(FrontolSchema.Unknown));
+        var text = ctx.Model.FindEntityType(typeof(User))!.FindProperty(nameof(User.Text));
+
+        Assert.That(text, Is.Not.Null);
+        Assert.That(text!.IsNullable, Is.True);
+    }
+
+    [Test]
     public void Неизвестная_схема_оставляет_модель_как_раньше()
     {
         using var ctx = Context(FrontolSchema.Unknown);
