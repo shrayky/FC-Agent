@@ -88,9 +88,8 @@ public class SalesSyncWorker : BackgroundService
         if (loaded.Value.Count == 0)
             return delaySeconds;
 
-        var sent = await _signalRClient.SendSalesDocuments(loaded.Value);
-        if (sent.IsSuccess)
-            _cursor.Set(loaded.Value.Max(document => document.DocumentNumber));
+        // Номер пишет только входящий SalesCursor. Пока его нет, следующий тик отправит ту же пачку.
+        await _signalRClient.SendSalesDocuments(loaded.Value);
 
         return delaySeconds;
     }
