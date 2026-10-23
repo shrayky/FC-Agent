@@ -110,6 +110,21 @@ public class MainDbCtxSchemaTests
     }
 
     [Test]
+    public void Старый_DOCKIND_без_полей_синхронизации_остаётся_в_запросе()
+    {
+        using var ctx = Context(FrontolSchema.ForTests(
+            ("DOCKIND", "ID"),
+            ("DOCKIND", "CODE"),
+            ("DOCKIND", "NAME")));
+        ctx.DocKinds = ctx.Set<DocKind>();
+
+        var sql = ctx.DocKinds!.ToQueryString();
+
+        Assert.That(sql, Does.Contain("NAME"));
+        Assert.That(sql, Does.Not.Contain("BDOCODE"));
+    }
+
+    [Test]
     public void Неизвестная_схема_оставляет_модель_как_раньше()
     {
         using var ctx = Context(FrontolSchema.Unknown);

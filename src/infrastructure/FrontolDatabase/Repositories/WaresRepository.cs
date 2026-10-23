@@ -31,7 +31,6 @@ public class WaresRepository : IFrontolWares
             if (_ctx.Wares == null)
                 return Result.Failure("Не удалось открыть SPRT");
 
-            var bdoCode = await BdoCode();
             var groupByCode = await LoadGroups(groups, wares);
             var wareByCode = await LoadWares(wares);
             var taxByCode = await LoadTaxGroups(groups, wares);
@@ -51,7 +50,6 @@ public class WaresRepository : IFrontolWares
                     group.Name,
                     parent,
                     group.Extra,
-                    bdoCode,
                     taxByCode,
                     printByCode);
                 groupByCode[code] = row;
@@ -70,12 +68,11 @@ public class WaresRepository : IFrontolWares
                     ware.Name,
                     parent,
                     ware.Extra,
-                    bdoCode,
                     taxByCode,
                     printByCode);
                 wareByCode[ware.WareCode] = row;
-                await ApplyBarcodes(row.Id, ware.Extra, bdoCode);
-                await ApplyRemainAndPrice(row.Id, ware.Extra, bdoCode);
+                await ApplyBarcodes(row.Id, ware.Extra);
+                await ApplyRemainAndPrice(row.Id, ware.Extra);
             }
 
             await _ctx.SaveChangesAsync();
@@ -95,7 +92,6 @@ public class WaresRepository : IFrontolWares
         string name,
         SprT? parent,
         JsonElement extra,
-        int bdoCode,
         Dictionary<int, int> taxByCode,
         Dictionary<int, int> printByCode)
     {
@@ -107,17 +103,13 @@ public class WaresRepository : IFrontolWares
             {
                 Id = id,
                 Code = code,
-                IsWare = isWare ? 1 : 0,
-                InsertChange = id,
-                ChangeCount = id,
-                DatabaseCode = bdoCode
+                IsWare = isWare ? 1 : 0
             };
             _ctx.Wares!.Add(row);
         }
         else
         {
             row = existing;
-            row.ChangeCount = await _mainDb.NextChangeId();
         }
 
         row.Name = name;
@@ -131,12 +123,11 @@ public class WaresRepository : IFrontolWares
         row.TaxGroupId = ResolveId(taxByCode, ExtraInt(extra, "taxGroupCode", 0));
         row.PrintGroupClose = ResolveId(printByCode, ExtraInt(extra, "printGroupCloseCode", 0));
         row.Deleted = 0;
-        row.DatabaseCode = bdoCode;
         return row;
     }
 
     // Frontol: перед вставкой удаляем BARCODE с тем же значением, иначе касса держит чужой WareID.
-    private async Task ApplyBarcodes(int wareId, JsonElement extra, int bdoCode)
+    private async Task ApplyBarcodes(int wareId, JsonElement extra)
     {
         if (_ctx.BarCodes == null || extra.ValueKind != JsonValueKind.Object)
             return;
@@ -158,16 +149,13 @@ public class WaresRepository : IFrontolWares
                 Id = id,
                 WareId = wareId,
                 Barcode = value,
-                Factor = ExtraDouble(item, "factor", 1),
-                ChangeCount = id,
-                InsertChange = id,
-                DatabaseCode = bdoCode
+                Factor = ExtraDouble(item, "factor", 1)
             });
         }
     }
 
     // Frontol: количества нет в Remain; начальный остаток — RemainD с DType=1. Цена всегда через RemainID.
-    private async Task ApplyRemainAndPrice(int wareId, JsonElement extra, int bdoCode)
+    private async Task ApplyRemainAndPrice(int wareId, JsonElement extra)
     {
         var loadRemain = ExtraBool(extra, "loadRemain");
         var hasPrice = HasNumber(extra, "price");
@@ -190,21 +178,13 @@ public class WaresRepository : IFrontolWares
             remain = new Remain
             {
                 Id = id,
-                WareId = wareId,
-                InsertChange = id,
-                ChangeCount = id,
-                DatabaseCode = bdoCode
+                WareId = wareId
             };
             _ctx.Remains.Add(remain);
-        }
-        else
-        {
-            remain.ChangeCount = await _mainDb.NextChangeId();
         }
 
         remain.UseRemain = loadRemain ? 1 : 0;
         remain.Deleted = 0;
-        remain.DatabaseCode = bdoCode;
 
         if (loadRemain && _ctx.RemainDs != null)
         {
@@ -219,15 +199,9 @@ public class WaresRepository : IFrontolWares
                     Id = id,
                     RemainId = remain.Id,
                     DType = 1,
-                    DocumentId = 0,
-                    ChangeCount = id,
-                    DatabaseCode = bdoCode
+                    DocumentId = 0
                 };
                 _ctx.RemainDs.Add(remainD);
-            }
-            else
-            {
-                remainD.ChangeCount = await _mainDb.NextChangeId();
             }
 
             remainD.Delta = delta;
@@ -246,16 +220,9 @@ public class WaresRepository : IFrontolWares
                 {
                     Id = id,
                     RemainId = remain.Id,
-                    ActDateTime = act,
-                    InsertChange = id,
-                    ChangeCount = id,
-                    DatabaseCode = bdoCode
+                    ActDateTime = act
                 };
                 _ctx.PriceDatas.Add(priceRow);
-            }
-            else
-            {
-                priceRow.ChangeCount = await _mainDb.NextChangeId();
             }
 
             priceRow.Price = price;
@@ -337,15 +304,6 @@ public class WaresRepository : IFrontolWares
             return _ctx.PrintGroups!.Where(FirebirdQuery.OrEquals<PrintGroup, int>(parameter, property, batch));
         });
         return rows.ToDictionary(row => row.Code, row => row.Id);
-    }
-
-    private async Task<int> BdoCode()
-    {
-        if (_ctx.CustomDb == null)
-            return 0;
-
-        var row = await _ctx.CustomDb.AsNoTracking().FirstOrDefaultAsync();
-        return row?.Code ?? 0;
     }
 
     private static SprT? FindGroup(Dictionary<int, SprT> groupByCode, int code) =>

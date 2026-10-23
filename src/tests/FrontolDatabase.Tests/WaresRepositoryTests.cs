@@ -31,7 +31,6 @@ public class WaresRepositoryTests
         _db.BarCodes = _db.Set<BarCode>();
         _db.TaxGroups = _db.Set<TaxGroup>();
         _db.PrintGroups = _db.Set<PrintGroup>();
-        _db.CustomDb = _db.Set<CustomDb>();
 
         _nextId = 9000;
         var mainDb = new Mock<IFrontolMainDb>();

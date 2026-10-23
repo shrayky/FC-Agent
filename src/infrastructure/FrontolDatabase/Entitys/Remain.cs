@@ -32,20 +32,8 @@ public class Remain
     [Column("DELETED")]
     public int Deleted { get; set; }
 
-    [Column("CHNG")]
-    public long ChangeCount { get; set; }
-
-    [Column("BDOCODE")]
-    public int DatabaseCode { get; set; }
-
     [Column("USEREMAIN")]
     public int UseRemain { get; set; }
-
-    [Column("OWNERBDO")]
-    public int OwnerBdo { get; set; }
-
-    [Column("INSCHNG")]
-    public long InsertChange { get; set; }
 
     [Column("ENTERPRISEID")]
     public int EnterpriseId { get; set; }

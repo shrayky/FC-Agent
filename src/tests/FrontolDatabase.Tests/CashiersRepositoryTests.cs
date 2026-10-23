@@ -25,8 +25,6 @@ public class CashiersRepositoryTests
         _db = new MainDbCtx(options);
         _db.Users = _db.Set<User>();
         _db.UserProfiles = _db.Set<Profile>();
-        _db.CustomDb = _db.Set<CustomDb>();
-        _db.CustomDb.Add(new CustomDb { Code = 7 });
         _db.UserProfiles.Add(new Profile { Id = 40, Code = 4, Name = "кассир" });
         _db.SaveChanges();
 
@@ -56,8 +54,6 @@ public class CashiersRepositoryTests
         Assert.That(user.Pswrd, Is.EqualTo("5ebe2294ecd0e0f08eab7690d2a6ee69"));
         Assert.That(user.Card, Is.EqualTo("4601"));
         Assert.That(user.Deleted, Is.EqualTo(0));
-        Assert.That(user.BdoCode, Is.EqualTo(7));
-        Assert.That(user.ChangeCount, Is.EqualTo(9000));
     }
 
     [Test]
@@ -71,9 +67,7 @@ public class CashiersRepositoryTests
             ProfileId = 1,
             Pswrd = "old",
             Card = "old-card",
-            Deleted = 1,
-            BdoCode = 2,
-            ChangeCount = 10
+            Deleted = 1
         });
         await _db.SaveChangesAsync();
 
@@ -87,8 +81,6 @@ public class CashiersRepositoryTests
         Assert.That(user.Pswrd, Is.EqualTo("5ebe2294ecd0e0f08eab7690d2a6ee69"));
         Assert.That(user.Card, Is.EqualTo("4601"));
         Assert.That(user.Deleted, Is.EqualTo(0));
-        Assert.That(user.BdoCode, Is.EqualTo(2));
-        Assert.That(user.ChangeCount, Is.EqualTo(9000));
     }
 
     [Test]
@@ -103,7 +95,7 @@ public class CashiersRepositoryTests
     [Test]
     public async Task Apply_код_не_больше_смещения_пропускает_строку()
     {
-        _db.Users!.Add(new User { Id = 8, Code = 100, Name = "на границе", Deleted = 0, ChangeCount = 10 });
+        _db.Users!.Add(new User { Id = 8, Code = 100, Name = "на границе", Deleted = 0 });
         await _db.SaveChangesAsync();
 
         var result = await _repository.Apply(100, [Cashier(0, "пусто", 4, "secret", "1")]);
@@ -112,13 +104,12 @@ public class CashiersRepositoryTests
         var border = _db.Users!.Single();
         Assert.That(border.Code, Is.EqualTo(100));
         Assert.That(border.Name, Is.EqualTo("на границе"));
-        Assert.That(border.ChangeCount, Is.EqualTo(10));
     }
 
     [Test]
     public async Task Apply_не_трогает_пользователя_не_выше_смещения()
     {
-        _db.Users!.Add(new User { Id = 8, Code = 1, Name = "админ", Deleted = 0, ChangeCount = 10 });
+        _db.Users!.Add(new User { Id = 8, Code = 1, Name = "админ", Deleted = 0 });
         await _db.SaveChangesAsync();
 
         var result = await _repository.Apply(100, [Cashier(5, "Анна", 4, "secret", "4601")]);
@@ -127,13 +118,12 @@ public class CashiersRepositoryTests
         var other = _db.Users!.Single(row => row.Code == 1);
         Assert.That(other.Name, Is.EqualTo("админ"));
         Assert.That(other.Deleted, Is.EqualTo(0));
-        Assert.That(other.ChangeCount, Is.EqualTo(10));
     }
 
     [Test]
     public async Task Apply_кассира_нет_в_пакете_удаляет_строку()
     {
-        _db.Users!.Add(new User { Id = 8, Code = 150, Name = "бывший", Deleted = 0, ChangeCount = 10 });
+        _db.Users!.Add(new User { Id = 8, Code = 150, Name = "бывший", Deleted = 0 });
         await _db.SaveChangesAsync();
 
         var result = await _repository.Apply(100, [Cashier(5, "Анна", 4, "secret", "4601")]);
@@ -147,7 +137,7 @@ public class CashiersRepositoryTests
     public async Task Apply_пустой_пакет_удаляет_кассиров_выше_смещения()
     {
         _db.Users!.Add(new User { Id = 8, Code = 150, Name = "бывший", Deleted = 0 });
-        _db.Users!.Add(new User { Id = 1, Code = 1, Name = "админ", Deleted = 0, ChangeCount = 3 });
+        _db.Users!.Add(new User { Id = 1, Code = 1, Name = "админ", Deleted = 0 });
         await _db.SaveChangesAsync();
 
         var result = await _repository.Apply(100, []);
@@ -156,7 +146,6 @@ public class CashiersRepositoryTests
         Assert.That(_db.Users!.Any(row => row.Code == 150), Is.False);
         var admin = _db.Users!.Single(row => row.Code == 1);
         Assert.That(admin.Deleted, Is.EqualTo(0));
-        Assert.That(admin.ChangeCount, Is.EqualTo(3));
     }
 
     [Test]
@@ -168,18 +157,6 @@ public class CashiersRepositoryTests
         var user = _db.Users!.Single();
         Assert.That(user.Code, Is.EqualTo(105));
         Assert.That(user.ProfileId, Is.EqualTo(0));
-    }
-
-    [Test]
-    public async Task Apply_без_CustomDb_ставит_BdoCode_0()
-    {
-        _db.CustomDb!.RemoveRange(_db.CustomDb);
-        await _db.SaveChangesAsync();
-
-        var result = await _repository.Apply(100, [Cashier(5, "Анна", 4, "secret", "4601")]);
-
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(_db.Users!.Single().BdoCode, Is.EqualTo(0));
     }
 
     [Test]

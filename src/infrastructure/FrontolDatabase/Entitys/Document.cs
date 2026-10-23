@@ -68,9 +68,6 @@ public class Document
     [Column("OPENSESSION")]
     public int OpenSession { get; set; }
 
-    [Column("CHNG")]
-    public long ChangeCount { get; set; }
-
     [Column("ISFISCAL")]
     public int IsFiscal { get; set; }
 

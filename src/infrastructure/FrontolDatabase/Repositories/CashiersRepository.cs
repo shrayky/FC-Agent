@@ -35,7 +35,6 @@ public class CashiersRepository : IFrontolCashiers
             if (_ctx.Users == null)
                 return Result.Failure("Не удалось открыть USER");
 
-            var bdoCode = await BdoCode();
             var rows = cashiers
                 .Select(item => (Code: offset + item.Code, Item: item))
                 .Where(row => row.Code > offset)
@@ -59,9 +58,7 @@ public class CashiersRepository : IFrontolCashiers
                         ProfileId = profileId,
                         Pswrd = PasswordHash(row.Item.Password),
                         Card = row.Item.Barcode,
-                        Deleted = 0,
-                        BdoCode = bdoCode,
-                        ChangeCount = id
+                        Deleted = 0
                     });
                     continue;
                 }
@@ -70,7 +67,6 @@ public class CashiersRepository : IFrontolCashiers
                 existing.ProfileId = profileId;
                 existing.Pswrd = PasswordHash(row.Item.Password);
                 existing.Card = row.Item.Barcode;
-                existing.ChangeCount = await _mainDb.NextChangeId();
                 existing.Deleted = 0;
             }
 
@@ -100,15 +96,6 @@ public class CashiersRepository : IFrontolCashiers
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var bytes = Encoding.GetEncoding(1251).GetBytes(password ?? string.Empty);
         return Convert.ToHexString(MD5.HashData(bytes)).ToLowerInvariant();
-    }
-
-    private async Task<int> BdoCode()
-    {
-        if (_ctx.CustomDb == null)
-            return 0;
-
-        var row = await _ctx.CustomDb.AsNoTracking().FirstOrDefaultAsync();
-        return row?.Code ?? 0;
     }
 
     private async Task<Dictionary<int, int>> ProfileIds(IReadOnlyList<int> codes)

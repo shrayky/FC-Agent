@@ -20,15 +20,6 @@ public class RemainD
     [Column("DOCUMENTID")]
     public long DocumentId { get; set; }
 
-    [Column("CHNG")]
-    public long ChangeCount { get; set; }
-
-    [Column("BDOCODE")]
-    public int DatabaseCode { get; set; }
-
     [Column("DTYPE")]
     public int DType { get; set; }
-
-    [Column("OWNERBDO")]
-    public int OwnerBdo { get; set; }
 }

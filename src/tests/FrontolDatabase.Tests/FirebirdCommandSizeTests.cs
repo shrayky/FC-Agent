@@ -38,6 +38,11 @@ public class FirebirdCommandSizeTests
 
         Assert.That(sql, Does.Not.Contain("8191"));
         Assert.That(sql, Does.Not.Contain("WHERE").IgnoreCase);
+        Assert.That(sql, Does.Not.Contain("CHNG"));
+        Assert.That(sql, Does.Not.Contain("BDOCODE"));
+        Assert.That(sql, Does.Not.Contain("OWNERBDO"));
+        Assert.That(sql, Does.Not.Contain("SYNCCATEG"));
+        Assert.That(sql, Does.Not.Contain("INSCHNG"));
     }
 
     [Test]

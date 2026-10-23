@@ -37,16 +37,4 @@ public class BarCode
 
     [Column("DELETED")]
     public int Deleted { get; set; }
-
-    [Column("BDOCODE")]
-    public int DatabaseCode { get; set; }
-
-    [Column("CHNG")]
-    public long ChangeCount { get; set; }
-
-    [Column("OWNERBDO")]
-    public int OwnerBdo { get; set; }
-
-    [Column("INSCHNG")]
-    public long InsertChange { get; set; }
 }

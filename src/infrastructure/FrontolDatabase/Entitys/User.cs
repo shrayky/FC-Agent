@@ -27,10 +27,4 @@ public class User
 
     [Column("DELETED")]
     public int Deleted { get; set; }
-
-    [Column("BDOCODE")]
-    public int BdoCode { get; set; }
-
-    [Column("CHNG")]
-    public long ChangeCount { get; set; }
 }
