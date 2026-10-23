@@ -11,6 +11,7 @@ public record SalesPosition
     public double PriceWd { get; init; }
     public double SumWd { get; init; }
     public bool Storno { get; init; }
+    public int PrintGroupCode { get; init; }
     public string GroupCode { get; init; } = string.Empty;
     public string GroupName { get; init; } = string.Empty;
 }

@@ -293,6 +293,8 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
             PriceWd = transaction.PriceWd,
             SumWd = storno ? -transaction.SummWd : transaction.SummWd,
             Storno = storno,
+            // TRANZT.PRINTGROUPCLOSE — код группы печати, не ID.
+            PrintGroupCode = transaction.PrintGroupClose,
             GroupCode = string.Empty,
             GroupName = string.Empty
         };
@@ -315,7 +317,8 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
             {
                 PaymentCode = t.Info,
                 PaymentName = payments.GetValueOrDefault(t.Info)?.Name ?? string.Empty,
-                Sum = t.Summ
+                Sum = t.Summ,
+                PrintGroupCode = t.PrintGroupClose
             })
             .ToList();
     }

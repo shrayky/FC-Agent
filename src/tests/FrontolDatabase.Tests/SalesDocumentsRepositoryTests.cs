@@ -167,6 +167,21 @@ public class SalesDocumentsRepositoryTests
     }
 
     [Test]
+    public async Task After_передаёт_код_группы_печати()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedPaymentKind(1, "Наличные");
+        await SeedClosedSale(101, 201, 50, paymentCode: 1, paymentSum: 50, printGroupCode: 3);
+
+        var result = await _repository.After(0, 50);
+
+        Assert.That(result.IsSuccess, Is.True);
+        var document = result.Value.Single();
+        Assert.That(document.Positions.Single().PrintGroupCode, Is.EqualTo(3));
+        Assert.That(document.Payments.Single().PrintGroupCode, Is.EqualTo(3));
+    }
+
+    [Test]
     public void WaresByCodes_sql_для_нескольких_кодов_без_FALSE()
     {
         var builder = new DbContextOptionsBuilder<MainDbCtx>();
@@ -265,16 +280,17 @@ public class SalesDocumentsRepositoryTests
         DateTime? closeDate = null,
         int? paymentCode = null,
         double? paymentSum = null,
-        int documentKindId = 1)
+        int documentKindId = 1,
+        int printGroupCode = 0)
     {
         _dbContext.Documents!.Add(Closed(id, checkNumber, summ, DocumentStateEnum.Closed, type, closeDate, documentKindId));
         var rows = new List<TranzT>
         {
             Open(id + 1000, id, 1, summ),
-            Ware(id + 2000, id, wareCode: 2, pos: 1, price: summ)
+            Ware(id + 2000, id, wareCode: 2, pos: 1, price: summ, printGroupCode: printGroupCode)
         };
         if (paymentCode is not null)
-            rows.Add(Pay(id + 3000, id, paymentCode.Value, paymentSum ?? summ));
+            rows.Add(Pay(id + 3000, id, paymentCode.Value, paymentSum ?? summ, printGroupCode));
         _dbContext.Transactions!.AddRange(rows);
         await _dbContext.SaveChangesAsync();
     }
@@ -338,7 +354,7 @@ public class SalesDocumentsRepositoryTests
     private static TranzT Open(long id, long documentId, double quantity, double summ) =>
         Base(id, documentId, TranzTypeEnum.OpenDocument, quantity, summ);
 
-    private static TranzT Ware(long id, long documentId, int wareCode, int pos, double price, double? priceWd = null)
+    private static TranzT Ware(long id, long documentId, int wareCode, int pos, double price, double? priceWd = null, int printGroupCode = 0)
     {
         var row = Base(id, documentId, TranzTypeEnum.WareFromCatalog, 1, price);
         row.WareCode = wareCode;
@@ -348,15 +364,17 @@ public class SalesDocumentsRepositoryTests
         row.PosId = pos;
         row.PosNumb = pos;
         row.Barcode = "4600000000001";
+        row.PrintGroupClose = printGroupCode;
         return row;
     }
 
-    private static TranzT Pay(long id, long documentId, int paymentCode, double summ)
+    private static TranzT Pay(long id, long documentId, int paymentCode, double summ, int printGroupCode = 0)
     {
         var row = Base(id, documentId, TranzTypeEnum.Payment, 0, summ);
         row.Price = summ;
         row.Info = paymentCode;
         row.PosNumb = 2;
+        row.PrintGroupClose = printGroupCode;
         return row;
     }
 
