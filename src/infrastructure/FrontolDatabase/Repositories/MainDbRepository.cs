@@ -1,6 +1,5 @@
 using CSharpFunctionalExtensions;
 using Domain.Frontol.Interfaces;
-using FrontolDatabase.Entitys;
 using FrontolDatabase.Mapping;
 using FrontolDatabase.Services;
 using Microsoft.EntityFrameworkCore;
@@ -94,19 +93,20 @@ public class MainDbRepository : IFrontolMainDb
 
             if (rows.Count == 0)
             {
-                _ctx.Settings.Add(new Settings
-                {
-                    Id = newVal,
-                    Name = restartOption,
-                    Value = text
-                });
+                // SYNCCATEG NOT NULL и без DEFAULT. Для InformAboutChanges Frontol ждёт 24:
+                // иначе вставка падает validation error, value "*** null ***".
+                // Старая база без колонки получает только ID, NAME, VAL.
+                await _ctx.Database.ExecuteSqlRawAsync(
+                    InsertInformAboutChangesSql(_ctx.Schema.HasColumn("SETTINGS", "SYNCCATEG")),
+                    newVal,
+                    restartOption,
+                    text);
             }
             else
             {
                 SettingsRows.SetValue(rows, text);
+                await _ctx.SaveChangesAsync();
             }
-
-            await _ctx.SaveChangesAsync();
         
             return Result.Success();
         }
@@ -173,6 +173,13 @@ public class MainDbRepository : IFrontolMainDb
             await DisposeWrite();
         }
     }
+
+    internal const int InformAboutChangesSyncCateg = 24;
+
+    internal static string InsertInformAboutChangesSql(bool hasSyncCateg)
+        => hasSyncCateg
+            ? $"INSERT INTO SETTINGS (ID, NAME, VAL, SYNCCATEG) VALUES ({{0}}, {{1}}, {{2}}, {InformAboutChangesSyncCateg})"
+            : "INSERT INTO SETTINGS (ID, NAME, VAL) VALUES ({0}, {1}, {2})";
 
     private async Task DisposeWrite()
     {
