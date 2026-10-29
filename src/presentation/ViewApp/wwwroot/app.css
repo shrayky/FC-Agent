@@ -144,14 +144,16 @@ label { color: #cbd5e1; margin-bottom: 6px; display: inline-block; }
 fieldset {
     border: 1px solid #262a40;
     border-radius: 12px;
-    padding: 20px;
+    padding: 20px 20px 20px 36px;
     margin-bottom: 20px;
     background: linear-gradient(145deg, #151935 0%, #0f1220 100%);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
 }
 
 legend {
-    padding: 0 12px;
+    /* Заголовок остаётся у левого края, поля ниже сдвинуты padding-left карточки. */
+    margin-left: -16px;
+    padding: 0 12px 0 0;
     color: #60a5fa;
     font-weight: 500;
     font-size: 0.95rem;
