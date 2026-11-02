@@ -109,7 +109,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
                 document,
                 TranzTypeEnum.Cancel,
                 wareCount,
-                printGroupClose: document.PrintGroupCode,
+                printGroupClose: document.PrintGroupCode ?? 0,
                 seller,
                 now,
                 openCountFills: CountFillsOfOpen(transactions)));
@@ -117,7 +117,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             document.State = DocumentStateEnum.Canceled;
             document.CloseDate = now.Date;
             document.CloseTime = now;
-            document.CloseUserId = document.OpenUserId;
+            document.CloseUserId = document.OpenUserId ?? document.CloseUserId;
 
             await _ctx.SaveChangesAsync();
             return await MapReceipt(document);
@@ -181,7 +181,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
                 document,
                 TranzTypeEnum.Close,
                 wareCount,
-                printGroupClose: document.PrintGroupCode,
+                printGroupClose: document.PrintGroupCode ?? 0,
                 seller,
                 now,
                 openCountFills: CountFillsOfOpen(transactions)));
@@ -189,7 +189,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             document.State = DocumentStateEnum.Closed;
             document.CloseDate = now.Date;
             document.CloseTime = now;
-            document.CloseUserId = document.OpenUserId;
+            document.CloseUserId = document.OpenUserId ?? document.CloseUserId;
 
             await _ctx.SaveChangesAsync();
             return await MapReceipt(document);
@@ -383,13 +383,13 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
         return Result.Success(new Receipt
         {
             Id = document.Id,
-            CheckNumber = document.CheckNumber,
+            CheckNumber = document.CheckNumber ?? 0,
             OpenDate = document.OpenDate,
             OpenTime = document.OpenDate.Date + document.OpenTime.TimeOfDay,
-            Summ = document.Summ,
-            SummWd = document.SummWd,
+            Summ = document.Summ ?? 0,
+            SummWd = document.SummWd ?? 0,
             PaidSumm = paid,
-            RemainSumm = Math.Max(0, document.SummWd - paid),
+            RemainSumm = Math.Max(0, (document.SummWd ?? 0) - paid),
             HasPrintGroup = HasPrintGroup(document, transactions),
             Positions = MapPositions(transactions, wares),
             Payments = MapPayments(transactions, payments)
@@ -480,7 +480,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             TrmkId = document.RmkId,
             PrintGroupClose = printGroupClose,
             SummRound = summ,
-            DiscountEnabled = document.CheckNumber
+            DiscountEnabled = document.CheckNumber ?? 0
         };
 
     private static TranzT CreateCloseLike(
@@ -502,8 +502,8 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             TranzType = type,
             Seller = seller,
             Quantity = quantity,
-            Summ = document.Summ,
-            SummWd = document.SummWd,
+            Summ = document.Summ ?? 0,
+            SummWd = document.SummWd ?? 0,
             CountFills = openCountFills,
             TrmkId = document.RmkId,
             PrintGroupClose = printGroupClose
@@ -613,7 +613,7 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
             .Sum(t => t.Summ);
 
     private static double RemainSumm(Document document, IEnumerable<TranzT> transactions) =>
-        document.SummWd - PaidSumm(transactions);
+        (document.SummWd ?? 0) - PaidSumm(transactions);
 
     private static int WareCount(IEnumerable<TranzT> transactions) =>
         transactions.Count(IsWare) - transactions.Count(IsStorno);
@@ -624,7 +624,8 @@ public class DeferredReceiptsRepository : IFrontolDeferredReceipts
     private static double CountFillsOfOpen(IEnumerable<TranzT> transactions) =>
         transactions.FirstOrDefault(t => t.TranzType == TranzTypeEnum.OpenDocument)?.CountFills ?? 0;
 
-    // Frontol: первая оплата получает PosNumb = 2, не 1.
-    private static int NextPaymentNumber(int lastPaymNum) =>
-        lastPaymNum == 0 ? 2 : lastPaymNum + 1;
+    // Frontol: первая оплата получает PosNumb = 2, не 1. У документа без оплат LASTPAYMNUM
+    // может стоять NULL, поэтому пустое значение считаем нулём.
+    private static int NextPaymentNumber(int? lastPaymNum) =>
+        lastPaymNum is null or 0 ? 2 : lastPaymNum.Value + 1;
 }

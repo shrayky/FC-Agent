@@ -63,6 +63,28 @@ public class SalesDocumentsRepositoryTests
     }
 
     [Test]
+    public async Task After_читает_документ_с_пустыми_необязательными_полями()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedClosedSale(101, 201, 98.13);
+
+        // Документ, созданный интеграцией, приходит с NULL в CLOSEUSERID, CHEQUENUMBER и SUMM.
+        var document = await _dbContext.Documents!.SingleAsync(d => d.Id == 101);
+        document.CloseUserId = null;
+        document.CheckNumber = null;
+        document.Summ = null;
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.After(0, 50);
+
+        Assert.That(result.IsSuccess, Is.True);
+        var sale = result.Value.Single();
+        Assert.That(sale.CheckNumber, Is.EqualTo(0));
+        Assert.That(sale.Sum, Is.EqualTo(0).Within(0.001));
+        Assert.That(sale.CashierCode, Is.Empty);
+    }
+
+    [Test]
     public async Task After_пропускает_непродажные_типы()
     {
         await SeedWare(2, "Кофе");

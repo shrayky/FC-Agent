@@ -172,6 +172,42 @@ public class DeferredReceiptsRepositoryTests
     }
 
     [Test]
+    public async Task List_читает_документ_с_пустыми_необязательными_полями()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedPayment(1, "Наличные");
+
+        // Документ, созданный интеграцией, приходит с NULL в LASTPAYMNUM, CHEQUENUMBER, SUMM,
+        // CLIENTID, DOCUMENTID и *USERID: в базе эти колонки nullable, а чтение NULL в int падает.
+        var document = Document(1746, 207, DocumentStateEnum.Deffered, 98.13, lastPaymNum: 0, printGroupCode: 1);
+        document.CheckNumber = null;
+        document.OpenUserId = null;
+        document.CloseUserId = null;
+        document.OwnerUserId = null;
+        document.ClientId = null;
+        document.BaseDocumentId = null;
+        document.LastPaymNum = null;
+        document.Summ = null;
+        document.SummWd = null;
+        document.PrintGroupCode = null;
+
+        _dbContext.Documents!.Add(document);
+        _dbContext.Transactions!.AddRange(
+            Open(1747, 1746, 1, 98.13),
+            Ware(1748, 1746, wareCode: 2, pos: 1, price: 98.13, printGroupClose: 1));
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.List();
+
+        Assert.That(result.IsSuccess, Is.True);
+        var receipt = result.Value.Receipts.Single();
+        Assert.That(receipt.CheckNumber, Is.EqualTo(0));
+        Assert.That(receipt.Summ, Is.EqualTo(0).Within(0.001));
+        Assert.That(receipt.RemainSumm, Is.EqualTo(0).Within(0.001));
+        Assert.That(receipt.Positions, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public async Task List_подставляет_имя_из_SprT()
     {
         await SeedWare(2, "Кофе");
@@ -304,6 +340,26 @@ public class DeferredReceiptsRepositoryTests
         Assert.That(document.CloseDate, Is.EqualTo(new DateTime(2026, 9, 3)));
         Assert.That(document.CloseTime.TimeOfDay, Is.EqualTo(new TimeSpan(9, 0, 58)));
         _mainDb.Verify(m => m.NextChangeId(), Times.Once);
+    }
+
+    [Test]
+    public async Task AddPayment_документу_без_LASTPAYMNUM_пишет_PosNumb_2()
+    {
+        await SeedWare(2, "Кофе");
+        await SeedPayment(1, "Наличные");
+        await SeedDeferredWithoutPayment(printGroupCode: 0, printGroupClose: 0);
+
+        var document = await _dbContext.Documents!.SingleAsync(d => d.Id == 1746);
+        document.LastPaymNum = null;
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.AddPayment(1746, PayItems(20));
+
+        Assert.That(result.IsSuccess, Is.True);
+
+        var payment = await _dbContext.Transactions!.AsNoTracking()
+            .SingleAsync(t => t.DocumentId == 1746 && t.TranzType == TranzTypeEnum.Payment);
+        Assert.That(payment.PosNumb, Is.EqualTo(2));
     }
 
     [Test]

@@ -74,7 +74,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
             }
 
             var cashierIds = documents
-                .Select(d => d.CloseUserId)
+                .Select(d => d.CloseUserId ?? 0)
                 .Where(id => id != 0)
                 .Distinct()
                 .ToList();
@@ -244,7 +244,7 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         Dictionary<int, DocKind> docKinds)
     {
         var closeDate = document.CloseDate.Year >= 1900 ? document.CloseDate : document.OpenDate;
-        cashiers.TryGetValue(document.CloseUserId, out var cashier);
+        cashiers.TryGetValue(document.CloseUserId ?? 0, out var cashier);
         docKinds.TryGetValue(document.DocumentKindId, out var docKind);
 
         return new SalesDocument
@@ -252,10 +252,10 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
             DocumentNumber = document.Id,
             DocumentDate = DateOnly.FromDateTime(closeDate),
             DocumentTime = TimeOnly.FromTimeSpan(document.CloseTime.TimeOfDay),
-            CheckNumber = document.CheckNumber,
+            CheckNumber = document.CheckNumber ?? 0,
             CashierCode = CashierCode(document, cashier),
             CashierName = cashier?.Name ?? string.Empty,
-            Sum = document.Summ,
+            Sum = document.Summ ?? 0,
             DocumentType = docKind?.Code ?? 0,
             Positions = transactions
                 .Where(IsPosition)
@@ -272,7 +272,8 @@ public class SalesDocumentsRepository : IFrontolSalesDocuments
         if (cashier != null)
             return cashier.Code.ToString();
 
-        return document.CloseUserId == 0 ? string.Empty : document.CloseUserId.ToString();
+        // CLOSEUSERID у документов, созданных интеграцией, может быть NULL.
+        return document.CloseUserId is { } userId && userId != 0 ? userId.ToString() : string.Empty;
     }
 
     private static SalesPosition MapPosition(TranzT transaction, Dictionary<int, string> wareNames)
