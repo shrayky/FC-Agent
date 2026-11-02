@@ -15,4 +15,10 @@ public class Settings
     
     [Column("VAL")]
     public string Value { get; set; } = string.Empty;
+
+    [Column("SYNCCATEG")]
+    public int SyncCategory { get; set; } = 0;
+
+    [Column("OWNERBDO")]
+    public int OwnerBdo { get; set; } = 0;
 }

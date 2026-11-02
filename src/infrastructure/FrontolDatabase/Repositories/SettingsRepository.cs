@@ -79,7 +79,9 @@ public class SettingsRepository: IFrontolSettings
             {
                 Id = newId,
                 Name = name,
-                Value = value
+                Value = value,
+                SyncCategory = 0,
+                OwnerBdo = 0
             });
 
             _logger.LogWarning("Настройка {name} не найдена в таблице SETTINGS — создана со значением {value}", name, value);
@@ -100,7 +102,7 @@ public class SettingsRepository: IFrontolSettings
         var setting = await _ctx.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Name == name);
 
         if (setting == null)
-            return Result.Failure<string>($"Не удалось установть настройку {name} - не найдена в БД");
+            return Result.Failure<string>($"Не удалось получить настройку {name} - не найдена в БД");
 
         return Result.Success(setting.Value);
     }
