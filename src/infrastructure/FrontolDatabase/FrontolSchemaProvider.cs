@@ -1,3 +1,5 @@
+using Domain.Frontol.Interfaces;
+
 namespace FrontolDatabase;
 
 /// <summary>
@@ -11,6 +13,7 @@ public class FrontolSchemaProvider
 
     private readonly Dictionary<string, FrontolSchema> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly FrontolSchema? _fixedSchema;
+    private readonly IFrontolMaintenance? _maintenance;
     private readonly Lock _lock = new();
 
     /// <summary>Провайдер по умолчанию: одно чтение на процесс и строку подключения.</summary>
@@ -18,6 +21,11 @@ public class FrontolSchemaProvider
 
     public FrontolSchemaProvider()
     {
+    }
+
+    public FrontolSchemaProvider(IFrontolMaintenance maintenance)
+    {
+        _maintenance = maintenance;
     }
 
     /// <summary>Провайдер с заранее заданной схемой: используется в тестах.</summary>
@@ -34,6 +42,11 @@ public class FrontolSchemaProvider
 
             if (_cache.TryGetValue(key, out var cached) && !IsRetryDue(cached))
                 return cached;
+
+            // Отказ не кладём в кеш: после выхода из обслуживания чтение схемы должно пройти сразу,
+            // а не ждать минуту, как после настоящей ошибки соединения.
+            if (_maintenance is { IsActive: true })
+                return FrontolSchema.Failed(_maintenance.Denial ?? "Сервисное обслуживание: база отключена.");
 
             var schema = Read(connectionString);
             _cache[key] = schema;

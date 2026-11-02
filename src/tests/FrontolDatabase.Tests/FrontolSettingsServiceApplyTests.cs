@@ -48,7 +48,7 @@ public class FrontolSettingsServiceApplyTests
         Assert.That(result.Error, Is.EqualTo("файлы"));
         Assert.That(harness.Order, Is.EqualTo(new[]
         {
-            "begin", "global", "parameters", "profiles", "script", "documents", "commit", "libraries"
+            "begin", "global", "parameters", "profiles", "script", "documents", "layouts", "commit", "libraries"
         }));
     }
 
@@ -62,7 +62,7 @@ public class FrontolSettingsServiceApplyTests
         Assert.That(result.IsSuccess, Is.True, result.IsFailure ? result.Error : "");
         Assert.That(harness.Order, Is.EqualTo(new[]
         {
-            "begin", "global", "parameters", "profiles", "script", "documents", "commit",
+            "begin", "global", "parameters", "profiles", "script", "documents", "layouts", "commit",
             "libraries", "cash", "restart"
         }));
     }
@@ -78,7 +78,7 @@ public class FrontolSettingsServiceApplyTests
         harness.Scripts.Verify(m => m.ToDb(It.IsAny<ActionScript>()), Times.Never);
         Assert.That(harness.Order, Is.EqualTo(new[]
         {
-            "begin", "global", "parameters", "profiles", "documents", "commit",
+            "begin", "global", "parameters", "profiles", "documents", "layouts", "commit",
             "libraries", "cash", "restart"
         }));
     }
@@ -98,7 +98,7 @@ public class FrontolSettingsServiceApplyTests
             Times.Never);
         Assert.That(harness.Order, Is.EqualTo(new[]
         {
-            "begin", "global", "parameters", "profiles", "documents", "commit", "restart"
+            "begin", "global", "parameters", "profiles", "documents", "layouts", "commit", "restart"
         }));
     }
 
@@ -113,9 +113,73 @@ public class FrontolSettingsServiceApplyTests
         harness.Scripts.Verify(m => m.ToDb(It.IsAny<ActionScript>()), Times.Once);
         Assert.That(harness.Order, Is.EqualTo(new[]
         {
-            "begin", "global", "parameters", "profiles", "script", "documents", "commit",
+            "begin", "global", "parameters", "profiles", "script", "documents", "layouts", "commit",
             "libraries", "cash", "restart"
         }));
+    }
+
+    [Test]
+    public async Task Ошибка_макетов_откатывает_базу_и_не_пишет_файлы()
+    {
+        var harness = Create();
+        harness.Layouts
+            .Setup(m => m.Apply(It.IsAny<IReadOnlyList<TouchLayout>?>()))
+            .ReturnsAsync(Result.Failure("макеты"))
+            .Callback(() => harness.Order.Add("layouts"));
+
+        var result = await harness.Service.ApplySettings(Packet(ScriptText));
+
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.EqualTo("макеты"));
+        Assert.That(harness.Order, Is.EqualTo(new[]
+        {
+            "begin", "global", "parameters", "profiles", "script", "documents", "layouts", "rollback"
+        }));
+        harness.Libraries.Verify(m => m.ToFiles(It.IsAny<IReadOnlyList<ScriptLibrary>>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Apply_передаёт_макеты_из_пакета()
+    {
+        var harness = Create();
+        var packet = Packet(ScriptText);
+        packet.UserInterface = new UserInterface
+        {
+            Layout = [new TouchLayout { Code = 4, Name = "Касса" }]
+        };
+
+        var result = await harness.Service.ApplySettings(packet);
+
+        Assert.That(result.IsSuccess, Is.True, result.IsFailure ? result.Error : "");
+        harness.Layouts.Verify(
+            m => m.Apply(It.Is<IReadOnlyList<TouchLayout>?>(rows => rows != null && rows.Single().Code == 4)),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task Read_кладёт_макеты_в_UserInterface()
+    {
+        var harness = Create();
+
+        var result = await harness.Service.ReadFrontolSettings();
+
+        Assert.That(result.IsSuccess, Is.True, result.IsFailure ? result.Error : "");
+        Assert.That(result.Value.UserInterface.Layout!.Single().Code, Is.EqualTo(4));
+        Assert.That(result.Value.UserInterface.Layout!.Single().Data, Is.EqualTo(new byte[] { 9 }));
+    }
+
+    [Test]
+    public async Task Ошибка_чтения_макетов_не_отдаёт_пакет()
+    {
+        var harness = Create();
+        harness.Layouts
+            .Setup(m => m.Read())
+            .ReturnsAsync(Result.Failure<UserInterface>("макеты"));
+
+        var result = await harness.Service.ReadFrontolSettings();
+
+        Assert.That(result.IsFailure, Is.True);
+        Assert.That(result.Error, Is.EqualTo("макеты"));
     }
 
     private static Harness Create(FrontolTariffState tariff = FrontolTariffState.NotBasic)
@@ -128,6 +192,7 @@ public class FrontolSettingsServiceApplyTests
         var libraries = new Mock<IFrontolScriptLibraries>();
         var cash = new Mock<IFrontolCashRegisterDriverScripts>();
         var documents = new Mock<IFrontolDocumentConfiguration>();
+        var layouts = new Mock<IFrontolTouchLayouts>();
         var tariffs = new Mock<IFrontolTariff>();
         tariffs.Setup(m => m.Current(It.IsAny<CancellationToken>())).ReturnsAsync(tariff);
 
@@ -157,6 +222,20 @@ public class FrontolSettingsServiceApplyTests
         documents.Setup(m => m.Apply(It.IsAny<DocumentConfiguration>()))
             .ReturnsAsync(Result.Success())
             .Callback(() => order.Add("documents"));
+        layouts.Setup(m => m.Apply(It.IsAny<IReadOnlyList<TouchLayout>?>()))
+            .ReturnsAsync(Result.Success())
+            .Callback(() => order.Add("layouts"));
+        settings.Setup(m => m.GetGlobalControlConfig()).ReturnsAsync(Result.Success(new GlobalControl()));
+        settings.Setup(m => m.GetParameters()).ReturnsAsync(Result.Success(new List<FrontolParameter>()));
+        profiles.Setup(m => m.GetUserProfiles()).ReturnsAsync(Result.Success(new List<UserProfile>()));
+        scripts.Setup(m => m.FromDb()).ReturnsAsync(Result.Success(new ActionScript()));
+        libraries.Setup(m => m.FromFiles()).ReturnsAsync(Result.Success(new List<ScriptLibrary>()));
+        cash.Setup(m => m.FromFiles()).ReturnsAsync(Result.Success(new List<AtolCashRegisterDriver10Srcipt>()));
+        documents.Setup(m => m.Read()).ReturnsAsync(Result.Success(new DocumentConfiguration()));
+        layouts.Setup(m => m.Read()).ReturnsAsync(Result.Success(new UserInterface
+        {
+            Layout = [new TouchLayout { Code = 4, Name = "Касса", Data = [9] }]
+        }));
 
         var services = new ServiceCollection();
         services.AddSingleton(main.Object);
@@ -166,18 +245,21 @@ public class FrontolSettingsServiceApplyTests
         services.AddSingleton(libraries.Object);
         services.AddSingleton(cash.Object);
         services.AddSingleton(documents.Object);
+        services.AddSingleton(layouts.Object);
         var provider = services.BuildServiceProvider();
 
         return new Harness(
             new FrontolSettingsService(
                 new Mock<ILogger<FrontolSettingsService>>().Object,
                 provider.GetRequiredService<IServiceScopeFactory>(),
-                tariffs.Object),
+                tariffs.Object,
+                new Mock<IFrontolMaintenance>().Object),
             order,
             scripts,
             libraries,
             cash,
-            documents);
+            documents,
+            layouts);
     }
 
     private static FrontolSettings Packet(string text) => new()
@@ -194,5 +276,6 @@ public class FrontolSettingsServiceApplyTests
         Mock<IFrontolActionScripts> Scripts,
         Mock<IFrontolScriptLibraries> Libraries,
         Mock<IFrontolCashRegisterDriverScripts> Cash,
-        Mock<IFrontolDocumentConfiguration> Documents);
+        Mock<IFrontolDocumentConfiguration> Documents,
+        Mock<IFrontolTouchLayouts> Layouts);
 }

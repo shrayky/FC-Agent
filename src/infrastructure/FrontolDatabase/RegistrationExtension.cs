@@ -40,11 +40,13 @@ namespace FrontolDatabase
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
 
             services.AddSingleton<FrontolSchemaProvider>();
+            services.AddSingleton<MaintenanceConnectionInterceptor>();
 
-            services.AddDbContext<MainDbCtx>(options =>
+            services.AddDbContext<MainDbCtx>((sp, options) =>
             {
                 MainDbCtx.UseFrontolFirebird(options, connectionString);
                 options.ReplaceService<IModelCacheKeyFactory, FrontolModelCacheKeyFactory>();
+                options.AddInterceptors(sp.GetRequiredService<MaintenanceConnectionInterceptor>());
             });
             
             services.AddScoped<IFrontolMainDb, MainDbRepository>();
@@ -57,6 +59,7 @@ namespace FrontolDatabase
             services.AddScoped<IFrontolWares, WaresRepository>();
             services.AddScoped<IFrontolCashiers, CashiersRepository>();
             services.AddScoped<IFrontolDocumentConfiguration, DocumentConfigurationRepository>();
+            services.AddScoped<IFrontolTouchLayouts, TouchLayoutRepository>();
             
             return services;
         }
@@ -76,8 +79,11 @@ namespace FrontolDatabase
             
             var connectionString = $"Server={serverName};Port=3050;Database={databasePath};User={dbConfig.UserName};Password={dbConfig.Password};";
             
-            services.AddDbContext<LogDbCtx>(options =>
-                MainDbCtx.UseFrontolFirebird(options, connectionString));
+            services.AddDbContext<LogDbCtx>((sp, options) =>
+            {
+                MainDbCtx.UseFrontolFirebird(options, connectionString);
+                options.AddInterceptors(sp.GetRequiredService<MaintenanceConnectionInterceptor>());
+            });
             
             services.AddScoped<IFrontolLog, LogRepository>();            
             return services;

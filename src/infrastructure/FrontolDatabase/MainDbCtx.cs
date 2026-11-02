@@ -32,6 +32,7 @@ public class MainDbCtx : DbContext
     private DbSet<PriceData>? _priceDatas;
     private DbSet<BarCode>? _barCodes;
     private DbSet<TaxGroup>? _taxGroups;
+    private DbSet<TouchLayt>? _touchLayouts;
 
     public DbSet<CustomDb>? CustomDb { get => Available(_customDb); set => _customDb = value; }
     public DbSet<Settings>? Settings { get => Available(_settings); set => _settings = value; }
@@ -54,6 +55,7 @@ public class MainDbCtx : DbContext
     public DbSet<PriceData>? PriceDatas { get => Available(_priceDatas); set => _priceDatas = value; }
     public DbSet<BarCode>? BarCodes { get => Available(_barCodes); set => _barCodes = value; }
     public DbSet<TaxGroup>? TaxGroups { get => Available(_taxGroups); set => _taxGroups = value; }
+    public DbSet<TouchLayt>? TouchLayouts { get => Available(_touchLayouts); set => _touchLayouts = value; }
 
     /// <summary>
     /// Сущности, которой нет в подключённой базе (нет таблицы), DbSet не отдаём:
@@ -242,6 +244,7 @@ public class MainDbCtx : DbContext
             .ValueGeneratedNever();
 
         ConfigureDocumentTemplates(modelBuilder);
+        ConfigureTouchLayouts(modelBuilder);
 
         modelBuilder.Entity<Remain>()
             .HasKey(k => k.Id);
@@ -307,6 +310,21 @@ public class MainDbCtx : DbContext
         modelBuilder.Entity<FrontolComment>()
             .Property(p => p.Id)
             .ValueGeneratedNever();
+    }
+
+    private static void ConfigureTouchLayouts(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TouchLayt>()
+            .HasKey(k => k.Id);
+
+        modelBuilder.Entity<TouchLayt>()
+            .Property(p => p.Id)
+            .ValueGeneratedNever();
+
+        // DATA — двоичный BLOB макета. Без явного типа провайдер может отдать его как текст.
+        modelBuilder.Entity<TouchLayt>()
+            .Property(p => p.Data)
+            .HasColumnType("BLOB");
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using CentralServerExchange.Services;
 using Domain.Agent;
 using Domain.AppState.Interfaces;
 using Domain.Configuration.Interfaces;
+using Domain.Frontol.Interfaces;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -13,13 +14,20 @@ public class UpdateDownloadWorker : BackgroundService
     private readonly IApplicationState _applicationState;
     private readonly IParametersService _parametersService;
     private readonly AgentUpdateService _agentUpdateService;
+    private readonly IFrontolMaintenance _maintenance;
 
-    public UpdateDownloadWorker(ILogger<UpdateDownloadWorker> logger, IApplicationState applicationState, IParametersService parametersService, AgentUpdateService agentUpdateService)
+    public UpdateDownloadWorker(
+        ILogger<UpdateDownloadWorker> logger,
+        IApplicationState applicationState,
+        IParametersService parametersService,
+        AgentUpdateService agentUpdateService,
+        IFrontolMaintenance maintenance)
     {
         _logger = logger;
         _applicationState = applicationState;
         _parametersService = parametersService;
         _agentUpdateService = agentUpdateService;
+        _maintenance = maintenance;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,7 +41,11 @@ public class UpdateDownloadWorker : BackgroundService
         {
             var updateInfo = _applicationState.NewVersionInformation();
 
-            if (updateInfo.Need)
+            if (updateInfo.Need && _maintenance.IsActive)
+            {
+                _logger.LogInformation("Сервисное обслуживание: скачивание обновления отложено");
+            }
+            else if (updateInfo.Need)
             {
                 var windowsDisk = DriveMetricsReader.WindowsSystemDrive();
                 if (!UpdateDiskGuard.HasEnoughSpace(windowsDisk.FreeBytes))

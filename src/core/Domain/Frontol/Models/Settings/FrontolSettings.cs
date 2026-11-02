@@ -19,6 +19,8 @@ public record FrontolSettings
 
     public List<DocumentComment>? Comments { get; set; }
 
+    public UserInterface UserInterface { get; set; } = new();
+
     // это поле означет что задание по выгрузек настроек из фронтола в центр завершено
     public bool Updated { get; set; }
 }

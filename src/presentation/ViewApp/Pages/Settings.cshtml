@@ -55,6 +55,25 @@
     </fieldset>
 
     <fieldset class="settings-card">
+        <legend>Сервисное обслуживание</legend>
+        @if (Model.MaintenanceActive)
+        {
+            <div class="alert alert-info">@Model.MaintenanceDenial</div>
+            <button type="submit" class="btn btn-primary maintenance-submit" form="maintenance-exit">Вернуть в работу</button>
+        }
+        else
+        {
+            <div class="maintenance-actions">
+                <div>
+                    <label class="form-label" for="maintenance-minutes">Вернуть через, минут</label>
+                    <input id="maintenance-minutes" class="form-control" type="number" name="minutes" value="60" min="1" max="1440" form="maintenance-enter" />
+                </div>
+                <button type="submit" class="btn btn-primary maintenance-submit" form="maintenance-enter">Отключить базу</button>
+            </div>
+        }
+    </fieldset>
+
+    <fieldset class="settings-card">
         <legend>Логирование</legend>
         <div class="form-check mb-3">
             <input type="checkbox" class="form-check-input" asp-for="AppSettings.LoggerSettings.IsEnabled" />
@@ -95,6 +114,9 @@
 
     <button class="btn btn-primary btn-save" type="submit">Сохранить</button>
 </form>
+
+<form id="maintenance-enter" method="post" asp-page-handler="EnterMaintenance"></form>
+<form id="maintenance-exit" method="post" asp-page-handler="ExitMaintenance"></form>
 
 <fieldset class="settings-card">
     <legend>Лицензии АТОЛ</legend>

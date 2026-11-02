@@ -11,18 +11,27 @@ public class FrontolLogsService
     private readonly IMemoryCache _memoryCache;
     private readonly IServiceScopeFactory  _serviceScope;
     private readonly ILogger<FrontolLogsService> _logger;
+    private readonly IFrontolMaintenance _maintenance;
 
     private const string CacheId = "LastLogId";
 
-    public FrontolLogsService(IMemoryCache memoryCache, IServiceScopeFactory serviceScope, ILogger<FrontolLogsService> logger)
+    public FrontolLogsService(
+        IMemoryCache memoryCache,
+        IServiceScopeFactory serviceScope,
+        ILogger<FrontolLogsService> logger,
+        IFrontolMaintenance maintenance)
     {
         _memoryCache = memoryCache;
         _serviceScope = serviceScope;
         _logger = logger;
+        _maintenance = maintenance;
     }
 
     public async Task<List<LogRecord>> Collect()
     {
+        if (_maintenance.IsActive)
+            return [];
+
         using var scope = _serviceScope.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IFrontolLog>();
         

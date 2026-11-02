@@ -40,6 +40,7 @@ public class SignalRAgentClient
     private readonly AgentLogsService _agentLogsService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ISalesCursorState _salesCursor;
+    private readonly IFrontolMaintenance _maintenance;
 
     private string _hubUrl = string.Empty;
     private string _agentId = string.Empty;
@@ -56,7 +57,8 @@ public class SignalRAgentClient
         FrontolSettingsService frontolSettingsService,
         AgentLogsService agentLogsService,
         IServiceScopeFactory serviceScopeFactory,
-        ISalesCursorState salesCursor)
+        ISalesCursorState salesCursor,
+        IFrontolMaintenance maintenance)
     {
         _logger = logger;
         _parametersService = parametersService;
@@ -65,6 +67,7 @@ public class SignalRAgentClient
         _agentLogsService = agentLogsService;
         _serviceScopeFactory = serviceScopeFactory;
         _salesCursor = salesCursor;
+        _maintenance = maintenance;
     }
 
     public bool ConnectionUp() => _connection is { State: HubConnectionState.Connected };
@@ -314,9 +317,14 @@ public class SignalRAgentClient
     private async Task SendAgentLogs(AgentLogsResponse logs) =>
         await TrySend(logs, "AgentLogs");
 
-    private async Task<Result> SendFrontolSettingsApplying(string editId) =>
+    private async Task<Result> SendFrontolSettingsApplying(Result result, string editId) =>
         await TrySend(
-            new FrontolSettingsApplyingState { Success = true, EditId = editId ?? string.Empty },
+            new FrontolSettingsApplyingState
+            {
+                Success = result.IsSuccess,
+                Message = result.IsFailure ? result.Error : string.Empty,
+                EditId = editId ?? string.Empty
+            },
             "FrontolSettingsApplying");
 
     public async Task RequestSalesCursor() =>
@@ -407,12 +415,18 @@ public class SignalRAgentClient
     private void OnNewVersionResponse(NewVersionResponse message)
     {
         _logger.LogInformation("Получена информация о обновлении от сервера: {message}", message);
+        if (MaintenanceActive())
+            return;
+
         _applicationState.NewVersionInformationUpdate(message);
     }
 
     private async Task OnFrontolSettingsRequest(FrontolSettingsRequest message)
     {
         _logger.LogInformation("Получен запрос настроек фронтола от сервера: {message}", message);
+
+        if (MaintenanceActive())
+            return;
 
         var frontolSettings = await _frontolSettingsService.ReadFrontolSettings();
 
@@ -431,20 +445,22 @@ public class SignalRAgentClient
     {
         _logger.LogInformation("Получен пакет с настройками фронтола от сервера: {message}", message);
 
+        if (MaintenanceActive())
+            return;
+
         var applyingResult = await _frontolSettingsService.ApplySettings(message.Settings);
         if (applyingResult.IsFailure)
-        {
-            // Подтверждение есть только у целиком записанного пакета. Ошибка на fc — таймаут.
             _logger.LogError(applyingResult.Error);
-            return;
-        }
 
-        await SendFrontolSettingsApplying(message.EditId);
+        await SendFrontolSettingsApplying(applyingResult, message.EditId);
     }
 
     private async Task OnPaySystemMode(PaySystemModeRequest message)
     {
         _logger.LogInformation("Получена команда режима банковских систем: {Mode}", message.Mode);
+
+        if (MaintenanceActive())
+            return;
 
         using var scope = _serviceScopeFactory.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<IPaySystemModeService>();
@@ -457,12 +473,18 @@ public class SignalRAgentClient
     private Task OnRestartAgent(RestartAgentRequest message)
     {
         _logger.LogWarning("Получена команда перезапуска агента");
+        if (MaintenanceActive())
+            return Task.CompletedTask;
+
         _applicationState.UpdateNeedRestart(true);
         return Task.CompletedTask;
     }
 
     private Task OnRestartRemote(RestartRemoteRequest message)
     {
+        if (MaintenanceActive())
+            return Task.CompletedTask;
+
         try
         {
             _logger.LogWarning("Получена команда рестарта fc-remote");
@@ -482,6 +504,9 @@ public class SignalRAgentClient
 
     private async Task OnSalesSyncSettings(SalesSyncSettingsRequest message)
     {
+        if (MaintenanceActive())
+            return;
+
         try
         {
             var current = await _parametersService.Current();
@@ -504,6 +529,9 @@ public class SignalRAgentClient
 
     private void OnSalesCursor(SalesCursorResponse message)
     {
+        if (MaintenanceActive())
+            return;
+
         _salesCursor.Set(message.DocumentNumber);
         _logger.LogInformation("Курсор продаж: {Number}", message.DocumentNumber);
     }
@@ -514,6 +542,9 @@ public class SignalRAgentClient
             "Получен справочник продаж: групп {groups}, товаров {wares}",
             message.Groups.Count,
             message.Wares.Count);
+
+        if (MaintenanceActive())
+            return;
 
         using var scope = _serviceScopeFactory.CreateScope();
         var apply = scope.ServiceProvider.GetRequiredService<IWareApplyService>();
@@ -531,6 +562,9 @@ public class SignalRAgentClient
             message.Cashiers.Count,
             message.Offset);
 
+        if (MaintenanceActive())
+            return;
+
         using var scope = _serviceScopeFactory.CreateScope();
         var apply = scope.ServiceProvider.GetRequiredService<ICashierApplyService>();
         var result = await apply.Apply(message.Offset, message.Cashiers);
@@ -543,6 +577,9 @@ public class SignalRAgentClient
     private async Task OnAgentLogsRequest(AgentLogsRequest message)
     {
         _logger.LogInformation("Получен запрос логов агента: {File}", message.SelectedLogFileName);
+
+        if (MaintenanceActive())
+            return;
 
         AgentLogsResponse response;
 
@@ -566,6 +603,9 @@ public class SignalRAgentClient
     private async Task OnDeferredReceiptsRequest(DeferredReceiptsRequest message)
     {
         _logger.LogInformation("Отложенные чеки: {Operation}", message.Operation);
+
+        if (MaintenanceActive())
+            return;
 
         using var scope = _serviceScopeFactory.CreateScope();
         var receipts = scope.ServiceProvider.GetRequiredService<IFrontolDeferredReceipts>();
@@ -612,6 +652,9 @@ public class SignalRAgentClient
     {
         _logger.LogInformation("Получена команда активации лицензии {LicenseId}", message.LicenseId);
 
+        if (MaintenanceActive())
+            return;
+
         using var scope = _serviceScopeFactory.CreateScope();
         var activator = scope.ServiceProvider.GetRequiredService<IAtolLicenseActivator>();
 
@@ -632,4 +675,14 @@ public class SignalRAgentClient
 
     private static Result ToUnit<T>(Result<T> result) =>
         result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
+
+    // Команду центра не выполняем и не отвечаем, пока база отключена.
+    private bool MaintenanceActive()
+    {
+        if (!_maintenance.IsActive)
+            return false;
+
+        _logger.LogWarning(_maintenance.Denial ?? "Сервисное обслуживание: база отключена.");
+        return true;
+    }
 }

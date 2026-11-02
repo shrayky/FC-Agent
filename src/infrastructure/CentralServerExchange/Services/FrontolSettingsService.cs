@@ -14,19 +14,25 @@ public class FrontolSettingsService
     private readonly ILogger<FrontolSettingsService> _logger;
     private readonly IServiceScopeFactory _serviceScope;
     private readonly IFrontolTariff _tariff;
+    private readonly IFrontolMaintenance _maintenance;
 
     public FrontolSettingsService(
         ILogger<FrontolSettingsService> logger,
         IServiceScopeFactory serviceScope,
-        IFrontolTariff tariff)
+        IFrontolTariff tariff,
+        IFrontolMaintenance maintenance)
     {
         _logger = logger;
         _serviceScope = serviceScope;
         _tariff = tariff;
+        _maintenance = maintenance;
     }
 
     public async Task<Result<FrontolSettings>> ReadFrontolSettings()
     {
+        if (_maintenance.Denial is { } denial)
+            return Result.Failure<FrontolSettings>(denial);
+
         using var scope = _serviceScope.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IFrontolSettings>();
         var userProfilesRepository = scope.ServiceProvider.GetRequiredService<IFrontolUserProfiles>();
@@ -34,6 +40,7 @@ public class FrontolSettingsService
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
         var scriptLibraries = scope.ServiceProvider.GetRequiredService<IFrontolScriptLibraries>();
         var documents = scope.ServiceProvider.GetRequiredService<IFrontolDocumentConfiguration>();
+        var touchLayouts = scope.ServiceProvider.GetRequiredService<IFrontolTouchLayouts>();
 
         var globalConfig = await repository.GetGlobalControlConfig();
         var parameters = await repository.GetParameters();
@@ -42,6 +49,7 @@ public class FrontolSettingsService
         var driverScripts = await cashRegisterScripts.FromFiles();
         var libraries = await scriptLibraries.FromFiles();
         var documentConfiguration = await documents.Read();
+        var layouts = await touchLayouts.Read();
 
         if (globalConfig.IsFailure)
             return Result.Failure<FrontolSettings>(globalConfig.Error);
@@ -64,6 +72,9 @@ public class FrontolSettingsService
         if (documentConfiguration.IsFailure)
             return Result.Failure<FrontolSettings>(documentConfiguration.Error);
 
+        if (layouts.IsFailure)
+            return Result.Failure<FrontolSettings>(layouts.Error);
+
         FrontolAgentScripts scripts = new()
         {
             FrontolScript = frontolScript.Value,
@@ -80,7 +91,8 @@ public class FrontolSettingsService
             DocumentKinds = documentConfiguration.Value.DocumentKinds,
             DocumentTemplates = documentConfiguration.Value.DocumentTemplates,
             PrintGroups = documentConfiguration.Value.PrintGroups,
-            Comments = documentConfiguration.Value.Comments
+            Comments = documentConfiguration.Value.Comments,
+            UserInterface = layouts.Value
         };
         
         return Result.Success(packet);
@@ -88,6 +100,9 @@ public class FrontolSettingsService
 
     public async Task<Result> ApplySettings(FrontolSettings settings)
     {
+        if (_maintenance.Denial is { } denial)
+            return Result.Failure(denial);
+
         using var scope = _serviceScope.CreateScope();
         var mainRepository = scope.ServiceProvider.GetRequiredService<IFrontolMainDb>();
         var settingsRepository = scope.ServiceProvider.GetRequiredService<IFrontolSettings>();
@@ -96,6 +111,7 @@ public class FrontolSettingsService
         var cashRegisterScripts = scope.ServiceProvider.GetRequiredService<IFrontolCashRegisterDriverScripts>();
         var scriptLibraries = scope.ServiceProvider.GetRequiredService<IFrontolScriptLibraries>();
         var documents = scope.ServiceProvider.GetRequiredService<IFrontolDocumentConfiguration>();
+        var touchLayouts = scope.ServiceProvider.GetRequiredService<IFrontolTouchLayouts>();
         var scripts = await ScriptTargetsFor(settings);
 
         // Bind, не Tap: Tap отбрасывает Result шага, и наверх уходит успех,
@@ -118,6 +134,7 @@ public class FrontolSettingsService
                 PrintGroups = settings.PrintGroups,
                 Comments = settings.Comments
             }))
+            .Bind(() => touchLayouts.Apply(settings.UserInterface?.Layout))
             .Bind(() => mainRepository.CommitWrite());
 
         if (writtenResult.IsFailure)

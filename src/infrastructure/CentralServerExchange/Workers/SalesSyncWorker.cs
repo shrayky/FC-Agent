@@ -17,19 +17,22 @@ public class SalesSyncWorker : BackgroundService
     private readonly IParametersService _parametersService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISalesCursorState _cursor;
+    private readonly IFrontolMaintenance _maintenance;
 
     public SalesSyncWorker(
         ILogger<SalesSyncWorker> logger,
         SignalRAgentClient signalRClient,
         IParametersService parametersService,
         IServiceScopeFactory scopeFactory,
-        ISalesCursorState cursor)
+        ISalesCursorState cursor,
+        IFrontolMaintenance maintenance)
     {
         _logger = logger;
         _signalRClient = signalRClient;
         _parametersService = parametersService;
         _scopeFactory = scopeFactory;
         _cursor = cursor;
+        _maintenance = maintenance;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,6 +67,10 @@ public class SalesSyncWorker : BackgroundService
         var delaySeconds = PollSeconds(sales.PollIntervalSeconds);
 
         if (!sales.LoadSales)
+            return delaySeconds;
+
+        // Курсор и чеки — обмен с центром. В обслуживании их не запрашиваем.
+        if (_maintenance.IsActive)
             return delaySeconds;
 
         if (!_signalRClient.ConnectionUp())

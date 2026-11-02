@@ -1,5 +1,6 @@
 using Domain.Configuration;
 using Domain.Configuration.Interfaces;
+using Domain.Frontol;
 using Domain.Frontol.Interfaces;
 using Domain.Frontol.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -11,12 +12,18 @@ public class SettingsModel : PageModel
 {
     private readonly IParametersService _parametersService;
     private readonly IAtolLicenseSource _licenses;
+    private readonly IFrontolMaintenance _maintenance;
     private readonly ILogger<SettingsModel> _logger;
 
-    public SettingsModel(IParametersService parametersService, IAtolLicenseSource licenses, ILogger<SettingsModel> logger)
+    public SettingsModel(
+        IParametersService parametersService,
+        IAtolLicenseSource licenses,
+        IFrontolMaintenance maintenance,
+        ILogger<SettingsModel> logger)
     {
         _parametersService = parametersService;
         _licenses = licenses;
+        _maintenance = maintenance;
         _logger = logger;
     }
 
@@ -29,20 +36,11 @@ public class SettingsModel : PageModel
 
     public AtolLicenseRead LicenseRead { get; private set; } = new([], false);
 
-    public async Task OnGetAsync()
-    {
-        try
-        {
-            AppSettings = await _parametersService.Current();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при загрузке настроек");
-            Message = $"Ошибка при загрузке настроек: {ex.Message}";
-        }
+    public bool MaintenanceActive => _maintenance.IsActive;
 
-        await LoadLicenses();
-    }
+    public string? MaintenanceDenial => _maintenance.Denial;
+
+    public async Task OnGetAsync() => await Load();
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -60,6 +58,25 @@ public class SettingsModel : PageModel
         }
 
         await LoadLicenses();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostEnterMaintenance(int minutes)
+    {
+        if (minutes < FrontolMaintenanceLimits.MinMinutes || minutes > FrontolMaintenanceLimits.MaxMinutes)
+            Message = $"Укажите срок от {FrontolMaintenanceLimits.MinMinutes} до {FrontolMaintenanceLimits.MaxMinutes} минут.";
+        else
+            _maintenance.Enter(TimeSpan.FromMinutes(minutes));
+
+        await Load();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostExitMaintenance()
+    {
+        _maintenance.Exit();
+        Message = "База снова доступна.";
+        await Load();
         return Page();
     }
 
@@ -96,6 +113,21 @@ public class SettingsModel : PageModel
             return "license-expired";
 
         return license.TariffDaysLeft <= 30 ? "license-soon" : string.Empty;
+    }
+
+    private async Task Load()
+    {
+        try
+        {
+            AppSettings = await _parametersService.Current();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при загрузке настроек");
+            Message ??= $"Ошибка при загрузке настроек: {ex.Message}";
+        }
+
+        await LoadLicenses();
     }
 
     private async Task LoadLicenses()

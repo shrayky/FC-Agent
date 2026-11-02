@@ -276,6 +276,22 @@ form + fieldset {
     padding-left: 18px;
 }
 
+.maintenance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.maintenance-actions .form-control {
+    width: 180px;
+    margin-bottom: 0;
+}
+
+.maintenance-submit {
+    margin-top: 0;
+}
+
 /* Анимация появления */
 .container {
     animation: fadeIn 0.3s ease-out;
